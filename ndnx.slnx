@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="src/ndnx/ndnx.csproj" />
+  <Project Path="src/Tests/Tests.csproj" />
+</Solution>

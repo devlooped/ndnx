@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <Product>ndnx</Product>
+    <ImplicitUsings>true</ImplicitUsings>
+  </PropertyGroup>
+</Project>
