@@ -165,12 +165,66 @@ fi
 
 echo "installed ${PREFIX}/${binary}"
 
+write_path_block() {
+    file=$1
+    kind=$2
+    mkdir -p "$(dirname "$file")"
+    tmpfile="${file}.ndnx.tmp.$$"
+    if [ -f "$file" ]; then
+        awk '
+            BEGIN { skip=0 }
+            /# >>> ndnx path >>>/ { skip=1; next }
+            /# <<< ndnx path <<</ { skip=0; next }
+            skip==0 { print }
+        ' "$file" > "$tmpfile"
+    else
+        : > "$tmpfile"
+    fi
+    if [ -s "$tmpfile" ]; then
+        printf '\n' >> "$tmpfile"
+    fi
+    if [ "$kind" = fish ]; then
+        cat >> "$tmpfile" <<EOF
+# >>> ndnx path >>>
+fish_add_path ${PREFIX}
+# <<< ndnx path <<<
+EOF
+    else
+        cat >> "$tmpfile" <<EOF
+# >>> ndnx path >>>
+case ":\$PATH:" in
+  *":${PREFIX}:"*) ;;
+  *) export PATH="${PREFIX}:\$PATH" ;;
+esac
+# <<< ndnx path <<<
+EOF
+    fi
+    mv "$tmpfile" "$file"
+    echo "PATH configured in $file"
+}
+
 if [ "$SKIP_PATH" != "1" ]; then
+    shell_name=$(basename "${SHELL:-/bin/sh}")
+    case "$shell_name" in
+        zsh)
+            write_path_block "${HOME}/.zshrc" posix
+            ;;
+        bash)
+            write_path_block "${HOME}/.bashrc" posix
+            write_path_block "${HOME}/.profile" posix
+            ;;
+        fish)
+            write_path_block "${HOME}/.config/fish/config.fish" fish
+            ;;
+        *)
+            write_path_block "${HOME}/.profile" posix
+            ;;
+    esac
+
     case ":${PATH}:" in
         *":${PREFIX}:"*) ;;
         *)
-            echo "add ${PREFIX} to PATH, for example:" >&2
-            echo "  export PATH=\"${PREFIX}:\$PATH\"" >&2
+            echo "restart your shell so ndnx is on PATH" >&2
             ;;
     esac
 fi

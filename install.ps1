@@ -34,6 +34,46 @@ function Get-NdnxRuntimeIdentifier {
     throw "ndnx: unsupported OS"
 }
 
+function Send-EnvironmentChange {
+    if (-not ($IsWindows -or $env:OS -eq 'Windows_NT')) {
+        return
+    }
+
+    if (-not ('Win32.NativeBroadcast' -as [type])) {
+        Add-Type -Namespace Win32 -Name NativeBroadcast -MemberDefinition @"
+[DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+public static extern IntPtr SendMessageTimeout(
+    IntPtr hWnd, uint Msg, UIntPtr wParam, string lParam,
+    uint fuFlags, uint uTimeout, out UIntPtr lpdwResult);
+"@
+    }
+
+    $result = [UIntPtr]::Zero
+    [void][Win32.NativeBroadcast]::SendMessageTimeout(
+        [IntPtr]0xffff,
+        0x1a,
+        [UIntPtr]::Zero,
+        'Environment',
+        2,
+        5000,
+        [ref]$result)
+}
+
+function Add-NdnxToUserPath([string]$dir) {
+    $parts = [Environment]::GetEnvironmentVariable('Path', 'User')
+    if (-not $parts) { $parts = '' }
+    $entries = $parts.Split([char]';', [StringSplitOptions]::RemoveEmptyEntries)
+    $env:Path = "$dir;$env:Path"
+    if ($entries -contains $dir) {
+        return
+    }
+
+    $updated = if ($parts) { "$parts;$dir" } else { $dir }
+    [Environment]::SetEnvironmentVariable('Path', $updated, 'User')
+    Send-EnvironmentChange
+    Write-Host "added $dir to the user PATH"
+}
+
 for ($i = 0; $i -lt $args.Count; $i++) {
     switch -Regex ($args[$i]) {
         '^--version$|^-Version$' { $Version = $args[++$i]; continue }
@@ -111,15 +151,7 @@ try {
     Write-Host "installed $dest"
 
     if (-not $SkipPath) {
-        $parts = [Environment]::GetEnvironmentVariable('Path', 'User')
-        if (-not $parts) { $parts = '' }
-        $onPath = $parts.Split(';', [StringSplitOptions]::RemoveEmptyEntries) -contains $Prefix
-        if (-not $onPath) {
-            $updated = if ($parts) { "$parts;$Prefix" } else { $Prefix }
-            [Environment]::SetEnvironmentVariable('Path', $updated, 'User')
-            $env:Path = "$Prefix;$env:Path"
-            Write-Host "added $Prefix to the user PATH"
-        }
+        Add-NdnxToUserPath $Prefix
     }
 }
 finally {
