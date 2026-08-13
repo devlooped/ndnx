@@ -65,7 +65,7 @@ Custom xUnit attributes are sometimes used for conditional test execution:
 
 #### CI/CD Pipeline
 - **Build workflow**: `.github/workflows/build.yml` - runs on PR and push to main/rel/feature branches
-- **Publish workflow**: Publishes to Sleet feed when `SLEET_CONNECTION` secret is available
+- **Publish workflow**: Builds Native AOT archives for the six-RID matrix and attaches them (plus install.sh / install.ps1) to the GitHub Release. Does not publish to nuget.org or Sleet.
 - **OS matrix**: Configured in `.github/workflows/os-matrix.json` (defaults to ubuntu-latest)
 
 ### Special Files and Tools

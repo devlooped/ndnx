@@ -1,6 +1,6 @@
-﻿# Builds a final release version and pushes to nuget.org 
-# whenever a release is published.
-# Requires: secrets.NUGET_API_KEY
+# Builds Native AOT binaries for the six-RID matrix and attaches
+# winget / Scoop / Homebrew archives + SHA256 checksums + install
+# scripts to the GitHub Release. Native binaries only.
 
 name: publish
 on:
@@ -10,20 +10,79 @@ on:
 env:
   DOTNET_NOLOGO: true
   Configuration: Release
-  PackOnBuild: true
-  GeneratePackageOnBuild: true
   VersionLabel: refs/tags/${{ github.event.release.tag_name }}
   GH_TOKEN: ${{ secrets.GH_TOKEN }}
   MSBUILDTERMINALLOGGER: auto
-  SLEET_FEED_URL: https://api.nuget.org/v3/index.json
-      
+
 jobs:
-  publish:
-    runs-on: ${{ vars.PUBLISH_AGENT || 'ubuntu-latest' }}
+  native-aot:
+    name: native-aot-${{ matrix.rid }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            rid: linux-x64
+          - os: ubuntu-24.04-arm
+            rid: linux-arm64
+          - os: windows-latest
+            rid: win-x64
+          - os: windows-11-arm
+            rid: win-arm64
+          - os: macos-15-intel
+            rid: osx-x64
+          - os: macos-latest
+            rid: osx-arm64
     steps:
       - name: 🤘 checkout
         uses: actions/checkout@v4
-        with: 
+
+      - name: ⚙ dotnet
+        uses: devlooped/actions-dotnet-env@v1
+
+      - name: 🧊 publish
+        shell: pwsh
+        run: |
+          $out = "artifacts/${{ matrix.rid }}"
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          dotnet publish src/ndnx/ndnx.csproj -c $env:Configuration -r ${{ matrix.rid }} --self-contained -p:PublishAot=true -o $out -bl:"publish-${{ matrix.rid }}.binlog"
+
+      - name: 📦 pack
+        shell: pwsh
+        run: |
+          $version = '${{ github.event.release.tag_name }}' -replace '^v',''
+          dotnet run --project src/nativepack --no-launch-profile -c $env:Configuration -- artifacts/${{ matrix.rid }} ${{ matrix.rid }} artifacts $version
+
+      - name: 📤 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-aot-${{ matrix.rid }}
+          path: |
+            artifacts/${{ matrix.rid }}/ndnx
+            artifacts/${{ matrix.rid }}/ndnx.exe
+            artifacts/ndnx-*.zip
+            artifacts/ndnx-*.tar.gz
+            artifacts/ndnx-*.sha256
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: 🐛 logs
+        uses: actions/upload-artifact@v4
+        if: runner.debug && always()
+        with:
+          name: logs-${{ matrix.rid }}
+          path: '*.binlog'
+
+  publish:
+    needs: native-aot
+    runs-on: ${{ vars.PUBLISH_AGENT || 'ubuntu-latest' }}
+    permissions:
+      contents: write
+    steps:
+      - name: 🤘 checkout
+        uses: actions/checkout@v4
+        with:
           submodules: recursive
           fetch-depth: 0
 
@@ -44,27 +103,32 @@ jobs:
           name: logs
           path: '*.binlog'
 
-      - name: ✅ validate
+      - name: 📥 native
+        uses: actions/download-artifact@v4
+        with:
+          pattern: native-aot-*
+          path: native
+
+      - name: 📤 archives
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-archives
+          path: |
+            native/**/*.zip
+            native/**/*.tar.gz
+            native/**/*.sha256
+            install.sh
+            install.ps1
+          if-no-files-found: error
+
+      - name: 🚀 release assets
         shell: pwsh
-        working-directory: bin
-        run: |
-          $invalid = Get-ChildItem -File -Filter "*.42.42*.nupkg"
-          if ($invalid) {
-            Write-Error "Found dev/local packages with disallowed 42.42* version prefix:`n$($invalid.Name -join "`n")"
-            exit 1
-          }
-
-      - name: 🚀 nuget
         env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
-        if: ${{ env.NUGET_API_KEY != '' && github.event.action != 'prereleased' }}
-        working-directory: bin
-        run: dotnet nuget push *.nupkg -s https://api.nuget.org/v3/index.json -k ${{secrets.NUGET_API_KEY}} --skip-duplicate
-
-      - name: 🚀 sleet
-        env:
-          SLEET_CONNECTION: ${{ secrets.SLEET_CONNECTION }}
-        if: env.SLEET_CONNECTION != ''
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
         run: |
-          dotnet tool update sleet -g --allow-downgrade --version $(curl -s --compressed ${{ vars.SLEET_FEED_URL }} | jq '.["sleet:version"]' -r)        
-          sleet push bin --config none -f --verbose -p "SLEET_FEED_CONTAINER=nuget" -p "SLEET_FEED_CONNECTIONSTRING=${{ secrets.SLEET_CONNECTION }}" -p "SLEET_FEED_TYPE=azure" || echo "No packages found"
+          $assets = @(Get-ChildItem native -Recurse -File | Where-Object {
+            $_.Extension -in '.zip', '.sha256' -or $_.Name.EndsWith('.tar.gz')
+          })
+          $assets += Get-Item install.sh, install.ps1
+          if ($assets.Count -eq 0) { throw 'No native archives, checksums, or install scripts found to attach.' }
+          gh release upload "${{ github.event.release.tag_name }}" @($assets.FullName) --clobber
