@@ -7,6 +7,7 @@ public sealed record Invocation
 {
     public bool Success { get; init; }
     public bool ShowHelp { get; init; }
+    public bool Update { get; init; }
     public string? Error { get; init; }
 
     public string? PackageId { get; init; }

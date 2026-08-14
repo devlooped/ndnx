@@ -35,6 +35,13 @@ Native AOT binaries also ship as GitHub Release assets for winget, Scoop, and Ho
 
 ## Usage
 *ndnx*
+
+Self-update the installed binary (optional version, including downgrades):
+
+```bash
+ndnx --update
+ndnx --update 0.1.0
+```
 <!-- #content -->
 ---
 <!-- include https://github.com/devlooped/sponsors/raw/main/footer.md -->

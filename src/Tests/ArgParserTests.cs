@@ -103,4 +103,70 @@ public class ArgParserTests
         Assert.Equal(["./feed"], parsed.Sources);
         Assert.Equal("1.0.0", parsed.Version);
     }
+
+    [Fact]
+    public void Update_alone_is_a_self_update_to_latest()
+    {
+        var parsed = ArgParser.Parse("--update");
+
+        Assert.True(parsed.Success);
+        Assert.True(parsed.Update);
+        Assert.Null(parsed.PackageId);
+        Assert.Null(parsed.Version);
+        Assert.Empty(parsed.ForwardedArguments);
+    }
+
+    [Theory]
+    [InlineData("--update", "1.2.3")]
+    [InlineData("--update", "v1.2.3")]
+    [InlineData("--update=1.2.3")]
+    [InlineData("--update=v1.2.3")]
+    [InlineData("--update", "--version", "1.2.3")]
+    [InlineData("--version", "1.2.3", "--update")]
+    public void Update_accepts_an_optional_version(params string[] args)
+    {
+        var parsed = ArgParser.Parse(args);
+
+        Assert.True(parsed.Success);
+        Assert.True(parsed.Update);
+        Assert.Null(parsed.PackageId);
+        Assert.Equal("1.2.3", parsed.Version);
+    }
+
+    [Fact]
+    public void Update_rejects_a_package_identity()
+    {
+        var parsed = ArgParser.Parse("--update", "acme.tool");
+
+        Assert.False(parsed.Success);
+        Assert.Contains("package identity", parsed.Error);
+        Assert.Contains("acme.tool", parsed.Error);
+    }
+
+    [Fact]
+    public void Update_rejects_package_at_version()
+    {
+        var parsed = ArgParser.Parse("--update", "acme.tool@1.0.0");
+
+        Assert.False(parsed.Success);
+        Assert.Contains("package identity", parsed.Error);
+    }
+
+    [Fact]
+    public void Update_rejects_extra_operands()
+    {
+        var parsed = ArgParser.Parse("--update", "1.2.3", "extra");
+
+        Assert.False(parsed.Success);
+        Assert.Contains("Unexpected arguments", parsed.Error);
+    }
+
+    [Fact]
+    public void Update_rejects_conflicting_versions()
+    {
+        var parsed = ArgParser.Parse("--update", "1.2.3", "--version", "4.5.6");
+
+        Assert.False(parsed.Success);
+        Assert.Contains("multiple versions", parsed.Error);
+    }
 }

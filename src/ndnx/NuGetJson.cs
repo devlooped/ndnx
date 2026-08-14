@@ -32,8 +32,15 @@ sealed class RuntimeGraphNode
     public string[]? Import { get; set; }
 }
 
+sealed class GitHubRelease
+{
+    [JsonPropertyName("tag_name")]
+    public string? TagName { get; set; }
+}
+
 [JsonSourceGenerationOptions(PropertyNameCaseInsensitive = true)]
 [JsonSerializable(typeof(ServiceIndex))]
 [JsonSerializable(typeof(FlatContainerIndex))]
 [JsonSerializable(typeof(RuntimeGraphFile))]
+[JsonSerializable(typeof(GitHubRelease))]
 sealed partial class NuGetJsonContext : JsonSerializerContext;

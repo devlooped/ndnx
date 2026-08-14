@@ -3,7 +3,7 @@ namespace ndnx;
 /// <summary>
 /// dnx.cmd-compatible argv split: first operand is PACKAGE[@VERSION], listed
 /// flags are consumed by ndnx, everything else (including tokens after --) is
-/// forwarded to the child.
+/// forwarded to the child. <c>--update [VERSION]</c> is a standalone self-update.
 /// </summary>
 public static class ArgParser
 {
@@ -39,8 +39,10 @@ public static class ArgParser
         string? packageId = null;
         string? identityVersion = null;
         string? versionOption = null;
+        string? updateVersion = null;
         string? configFile = null;
         string? verbosity = null;
+        var update = false;
         var prerelease = false;
         var yes = false;
         var allowRollForward = false;
@@ -79,6 +81,21 @@ public static class ArgParser
             }
 
             var (option, inline) = SplitOption(arg);
+            if (option is not null && option.Equals("--update", StringComparison.OrdinalIgnoreCase))
+            {
+                update = true;
+                if (inline is not null)
+                {
+                    if (updateVersion is not null)
+                        return Invocation.Failed("Cannot specify --update version more than once.");
+
+                    updateVersion = NormalizeUpdateVersion(inline);
+                    if (updateVersion.Length == 0)
+                        return Invocation.Failed("Missing value for --update.");
+                }
+
+                continue;
+            }
             if (option is not null && Valued.Contains(option))
             {
                 var value = inline;
@@ -162,6 +179,9 @@ public static class ArgParser
             forwarded.Add(arg);
         }
 
+        if (update)
+            return FinishUpdate(packageId, identityVersion, versionOption, updateVersion, forwarded, verbosity);
+
         if (packageId is null)
         {
             return Invocation.Failed(
@@ -202,6 +222,69 @@ public static class ArgParser
             AddSources = addSources,
             ForwardedArguments = forwarded,
         };
+    }
+
+    static Invocation FinishUpdate(
+        string? packageId,
+        string? identityVersion,
+        string? versionOption,
+        string? updateVersion,
+        List<string> forwarded,
+        string? verbosity)
+    {
+        if (forwarded.Count > 0)
+            return Invocation.Failed("Unexpected arguments for --update.");
+
+        if (identityVersion is not null)
+        {
+            return Invocation.Failed(
+                "--update cannot be combined with a package identity.");
+        }
+
+        var versions = new List<string>();
+        if (updateVersion is not null)
+            versions.Add(updateVersion);
+        if (versionOption is not null)
+            versions.Add(NormalizeUpdateVersion(versionOption));
+
+        if (packageId is not null)
+        {
+            var fromOperand = NormalizeUpdateVersion(packageId);
+            if (!PackageVersion.TryParse(fromOperand, out _))
+            {
+                return Invocation.Failed(
+                    $"--update cannot be combined with a package identity. Unexpected '{packageId}'.");
+            }
+
+            versions.Add(fromOperand);
+        }
+
+        var distinct = versions.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if (distinct.Count > 1)
+            return Invocation.Failed("Cannot specify multiple versions for --update.");
+
+        var version = distinct.Count == 0 ? null : distinct[0];
+        if (version is { Length: 0 })
+            return Invocation.Failed("Missing value for --update.");
+
+        if (version is not null && !PackageVersion.TryParse(version, out _))
+            return Invocation.Failed($"Invalid version '{version}'.");
+
+        return new Invocation
+        {
+            Success = true,
+            Update = true,
+            Version = version,
+            Verbosity = verbosity,
+        };
+    }
+
+    static string NormalizeUpdateVersion(string value)
+    {
+        var text = value.Trim();
+        if (text.Length > 0 && (text[0] is 'v' or 'V'))
+            text = text[1..];
+        return text;
     }
 
     static bool TryParseIdentity(string token, out string? packageId, out string? version, out string? error)

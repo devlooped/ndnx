@@ -11,6 +11,10 @@ public sealed class NdnxHost
     public TextWriter Out { get; init; } = Console.Out;
     public TextWriter Error { get; init; } = Console.Error;
     public HttpMessageHandler? HttpHandler { get; init; }
+    public string? ExecutablePath { get; init; }
+    public string? CurrentVersion { get; init; }
+    public string? UpdateRepository { get; init; }
+    public string? RuntimeIdentifier { get; init; }
 
     public static NdnxHost CreateDefault() => new();
 
@@ -29,6 +33,7 @@ public static class App
 {
     const string Usage = """
         Usage: ndnx <PACKAGE_NAME[@VERSION]> [options] [--] [tool arguments]
+               ndnx --update [VERSION]
 
         Options:
           --source <SOURCE>          Override package sources
@@ -43,6 +48,7 @@ public static class App
           --ignore-failed-sources    Treat source failures as warnings
           --no-http-cache            Do not use an HTTP cache
           --interactive              Allow interactive restore prompts
+          --update [VERSION]         Self-update ndnx to the latest or given version
         """;
 
     public static int Run(string[] args) => RunAsync(args).GetAwaiter().GetResult();
@@ -68,6 +74,9 @@ public static class App
             using var http = host.HttpHandler is { } handler
                 ? new HttpClient(handler, disposeHandler: false)
                 : new HttpClient();
+
+            if (invocation.Update)
+                return await SelfUpdate.RunAsync(invocation, host, http, cancellationToken).ConfigureAwait(false);
 
             var log = IsDetailed(invocation.Verbosity) ? host.Out : null;
             var sources = PackageSources.Resolve(invocation, host.WorkingDirectory);
