@@ -132,3 +132,19 @@ jobs:
           $assets += Get-Item install.sh, install.ps1
           if ($assets.Count -eq 0) { throw 'No native archives, checksums, or install scripts found to attach.' }
           gh release upload "${{ github.event.release.tag_name }}" @($assets.FullName) --clobber
+
+  # After Windows zips are on the published release, open a winget-pkgs PR.
+  # Skipped for prereleases (WinGet does not take them) and for drafts
+  # (this workflow only sees prereleased/released, never unpublished drafts).
+  winget:
+    name: winget
+    needs: publish
+    if: github.event.action == 'released'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📤 winget
+        uses: vedantmgoyal9/winget-releaser@main
+        with:
+          identifier: Devlooped.ndnx
+          installers-regex: 'ndnx-.*-win-.*\.zip$'
+          token: ${{ secrets.WINGET_TOKEN }}
