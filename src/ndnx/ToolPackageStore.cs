@@ -53,7 +53,7 @@ public sealed class ToolPackageStore
             log?.WriteLine($"Using cached {selected.Id} {selected.Version}");
         }
 
-        return LocateCommand(packageDirectory, selected);
+        return await LocateOrHopAsync(packageDirectory, selected, sources, cancellationToken).ConfigureAwait(false);
     }
 
     public string GetPackageDirectory(string packageId, PackageVersion version)
@@ -61,6 +61,52 @@ public sealed class ToolPackageStore
 
     public static bool IsCached(string packageDirectory)
         => File.Exists(Path.Combine(packageDirectory, ReadyMarker));
+
+    async Task<ToolCommand> LocateOrHopAsync(
+        string packageDirectory,
+        PackageIdentity package,
+        IReadOnlyList<string> sources,
+        CancellationToken cancellationToken)
+    {
+        var settingsPath = FindSettings(packageDirectory)
+            ?? throw new InvalidOperationException(
+                $"Package {package.Id} {package.Version} is missing DotnetToolSettings.xml.");
+
+        var settings = ReadSettings(settingsPath);
+        if (settings.RidPackages.Count == 0 || !string.IsNullOrEmpty(settings.Runner))
+            return LocateCommand(packageDirectory, package);
+
+        var hostRid = RuntimeInformation.RuntimeIdentifier;
+        var ridPackageId = RidPackageResolver.Resolve(hostRid, settings.RidPackages);
+        if (ridPackageId is null)
+        {
+            var declared = string.Join(' ', settings.RidPackages.Keys.OrderBy(k => k, StringComparer.OrdinalIgnoreCase));
+            throw new InvalidOperationException(
+                $"Package {package.Id} {package.Version} has no RID-specific package for '{hostRid}'. Declared RIDs: {declared}.");
+        }
+
+        var ridRange = VersionRange.Exact(package.Version);
+        var ridCandidates = await feed.ListAsync(sources, ridPackageId, ridRange, cancellationToken).ConfigureAwait(false);
+        if (ridCandidates.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"RID-specific package '{ridPackageId}' {package.Version} was not found on the configured sources.");
+        }
+
+        var ridSelected = ridCandidates.OrderByDescending(c => c.Version).First();
+        var ridDirectory = GetPackageDirectory(ridSelected.Id, ridSelected.Version);
+        if (!IsCached(ridDirectory))
+        {
+            log?.WriteLine($"Downloading {ridSelected.Id} {ridSelected.Version} from {ridSelected.Source}");
+            await DownloadAndExtractAsync(ridSelected, ridDirectory, cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            log?.WriteLine($"Using cached {ridSelected.Id} {ridSelected.Version}");
+        }
+
+        return LocateCommand(ridDirectory, ridSelected);
+    }
 
     async Task DownloadAndExtractAsync(PackageIdentity package, string packageDirectory, CancellationToken cancellationToken)
     {
@@ -88,12 +134,6 @@ public sealed class ToolPackageStore
                 $"Package {package.Id} {package.Version} is missing DotnetToolSettings.xml.");
 
         var settings = ReadSettings(settingsPath);
-        if (settings.RidPackages.Count > 0 && string.IsNullOrEmpty(settings.Runner))
-        {
-            throw new InvalidOperationException(
-                $"Package {package.Id} {package.Version} declares RID-specific packages, which are not resolved by this runner. Use a classic tools/ TFM/RID layout.");
-        }
-
         if (string.IsNullOrEmpty(settings.Name) || string.IsNullOrEmpty(settings.EntryPoint) || string.IsNullOrEmpty(settings.Runner))
         {
             throw new InvalidOperationException(
@@ -107,7 +147,24 @@ public sealed class ToolPackageStore
                 $"Tool entry point '{settings.EntryPoint}' was not found in {package.Id} {package.Version}.");
         }
 
+        // NuGet pack writes 0644 into the nupkg; dnx/NuGet extract then marks
+        // the payload executable. ZipFile.ExtractToDirectory keeps 0644.
+        if (string.Equals(settings.Runner, "executable", StringComparison.OrdinalIgnoreCase))
+            EnsureUnixExecuteBits(Path.GetDirectoryName(entryPoint)!);
+
         return new ToolCommand(settings.Name, entryPoint, settings.Runner);
+    }
+
+    static void EnsureUnixExecuteBits(string directory)
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        foreach (var file in Directory.GetFiles(directory))
+        {
+            var mode = File.GetUnixFileMode(file);
+            File.SetUnixFileMode(file, mode | UnixFileMode.UserExecute);
+        }
     }
 
     static string? FindSettings(string packageDirectory)

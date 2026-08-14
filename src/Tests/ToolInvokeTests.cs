@@ -95,6 +95,101 @@ public class ToolInvokeTests : IClassFixture<HelloToolFeed>
         Assert.Contains(HelloToolFeed.Phrase, result.Stdout);
     }
 
+    [Fact]
+    public async Task Multi_rid_store_get_uses_rid_package_entry_point()
+    {
+        var storeDir = NewStore();
+        var command = await GetShippedAsync(storeDir, HelloToolFeed.RidWrapperId);
+
+        var ridDir = Path.GetFullPath(new ToolPackageStore(NullFeed(), storeDir)
+            .GetPackageDirectory(HelloToolFeed.RidImplId, ParsedFixtureVersion()));
+        Assert.StartsWith(ridDir, Path.GetFullPath(command.EntryPointPath), StringComparison.OrdinalIgnoreCase);
+        Assert.True(File.Exists(command.EntryPointPath));
+        Assert.Equal("dotnet", command.Runner);
+        Assert.Equal("hello-rid", command.Name);
+
+        var host = NewHost(new ProcessRunner(), storeDir);
+        var code = await App.RunAsync(InvokeArgs(HelloToolFeed.RidWrapperId, "0", "from-rid"), host);
+        Assert.Equal(0, code);
+        Assert.True(Cached(storeDir, HelloToolFeed.RidImplId));
+    }
+
+    [Fact]
+    public async Task Multi_rid_any_fallback_uses_any_package_not_wrapper()
+    {
+        var storeDir = NewStore();
+        var command = await GetShippedAsync(storeDir, HelloToolFeed.AnyWrapperId);
+
+        var anyDir = Path.GetFullPath(new ToolPackageStore(NullFeed(), storeDir)
+            .GetPackageDirectory(HelloToolFeed.AnyImplId, ParsedFixtureVersion()));
+        var wrapperDir = Path.GetFullPath(new ToolPackageStore(NullFeed(), storeDir)
+            .GetPackageDirectory(HelloToolFeed.AnyWrapperId, ParsedFixtureVersion()));
+        Assert.StartsWith(anyDir, Path.GetFullPath(command.EntryPointPath), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(
+            Path.DirectorySeparatorChar + HelloToolFeed.AnyWrapperId + Path.DirectorySeparatorChar,
+            command.EntryPointPath,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.True(File.Exists(Path.Combine(wrapperDir, "tools", "any", "any", "DotnetToolSettings.xml")));
+
+        var result = LaunchNdnx(
+            storeDir,
+            [HelloToolFeed.AnyWrapperId + "@" + HelloToolFeed.PackageVersion, "--yes", "--source", feed.FeedDirectory, "--", "0", "from-any"]);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains(HelloToolFeed.AnyPhrase, result.Stdout);
+        Assert.DoesNotContain("declares RID-specific packages", result.Stdout);
+        Assert.DoesNotContain("declares RID-specific packages", result.Stderr);
+        Assert.DoesNotContain("not resolved by this runner", result.Stdout + result.Stderr);
+    }
+
+    [Fact]
+    public async Task Multi_rid_no_match_names_host_and_declared_rids()
+    {
+        var storeDir = NewStore();
+        using var http = new HttpClient();
+        var store = new ToolPackageStore(new PackageFeed(http, ignoreFailedSources: false), storeDir);
+        var invocation = ArgParser.Parse(
+            HelloToolFeed.NoMatchWrapperId + "@" + HelloToolFeed.PackageVersion,
+            "--yes",
+            "--source",
+            feed.FeedDirectory);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => store.GetAsync(invocation, [feed.FeedDirectory]));
+
+        Assert.Contains(HelloToolFeed.HostRid, ex.Message);
+        Assert.Contains(HelloToolFeed.UnusedRid, ex.Message);
+        Assert.Contains("Declared RIDs", ex.Message);
+        Assert.DoesNotContain("not resolved by this runner", ex.Message);
+    }
+
+    [Fact]
+    public void Multi_rid_real_entry_prints_rid_phrase_and_caches()
+    {
+        var store = NewStore();
+        var args = new[]
+        {
+            HelloToolFeed.RidWrapperId + "@" + HelloToolFeed.PackageVersion,
+            "--yes",
+            "--source",
+            feed.FeedDirectory,
+            "--",
+            "0",
+            "via-multirid",
+        };
+
+        var first = LaunchNdnx(store, args);
+        Assert.Equal(0, first.ExitCode);
+        Assert.Contains(HelloToolFeed.Phrase, first.Stdout);
+        Assert.DoesNotContain("declares RID-specific packages", first.Stdout + first.Stderr);
+        Assert.True(Cached(store, HelloToolFeed.RidImplId));
+        var markerTime = File.GetLastWriteTimeUtc(Marker(store, HelloToolFeed.RidImplId));
+
+        var second = LaunchNdnx(store, args);
+        Assert.Equal(0, second.ExitCode);
+        Assert.Contains(HelloToolFeed.Phrase, second.Stdout);
+        Assert.Equal(markerTime, File.GetLastWriteTimeUtc(Marker(store, HelloToolFeed.RidImplId)));
+    }
+
     NdnxHost NewHost(IProcessRunner runner, string? store = null)
     {
         store ??= NewStore();
@@ -125,6 +220,25 @@ public class ToolInvokeTests : IClassFixture<HelloToolFeed>
 
         return [.. args];
     }
+
+    async Task<ToolCommand> GetShippedAsync(string storeDir, string packageId)
+    {
+        using var http = new HttpClient();
+        var store = new ToolPackageStore(new PackageFeed(http, ignoreFailedSources: false), storeDir);
+        var invocation = ArgParser.Parse(
+            packageId + "@" + HelloToolFeed.PackageVersion,
+            "--yes",
+            "--source",
+            feed.FeedDirectory);
+        return await store.GetAsync(invocation, [feed.FeedDirectory]);
+    }
+
+    static PackageFeed NullFeed() => new(new HttpClient(), ignoreFailedSources: false);
+
+    static PackageVersion ParsedFixtureVersion()
+        => PackageVersion.TryParse(HelloToolFeed.PackageVersion, out var parsed)
+            ? parsed
+            : throw new InvalidOperationException("bad fixture version");
 
     static string NewStore()
     {

@@ -10,4 +10,7 @@
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <AssemblyName>ndnx</AssemblyName>
   </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="PortableRuntimeIdentifierGraph.json" LogicalName="PortableRuntimeIdentifierGraph.json" />
+  </ItemGroup>
 </Project>
