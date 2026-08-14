@@ -104,6 +104,30 @@ public class ArgParserTests
         Assert.Equal("1.0.0", parsed.Version);
     }
 
+    [Theory]
+    [InlineData("--version")]
+    [InlineData("--VERSION")]
+    public void Version_alone_prints_the_ndnx_version(string arg)
+    {
+        var parsed = ArgParser.Parse(arg);
+
+        Assert.True(parsed.Success);
+        Assert.True(parsed.ShowVersion);
+        Assert.Null(parsed.PackageId);
+        Assert.Null(parsed.Version);
+        Assert.Empty(parsed.ForwardedArguments);
+    }
+
+    [Fact]
+    public void Version_with_a_value_and_no_package_is_still_an_error()
+    {
+        var parsed = ArgParser.Parse("--version", "1.2.3");
+
+        Assert.False(parsed.Success);
+        Assert.False(parsed.ShowVersion);
+        Assert.Contains("PACKAGE_NAME", parsed.Error);
+    }
+
     [Fact]
     public void Update_alone_is_a_self_update_to_latest()
     {

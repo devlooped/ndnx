@@ -4,6 +4,7 @@ namespace ndnx;
 /// dnx.cmd-compatible argv split: first operand is PACKAGE[@VERSION], listed
 /// flags are consumed by ndnx, everything else (including tokens after --) is
 /// forwarded to the child. <c>--update [VERSION]</c> is a standalone self-update.
+/// A lone <c>--version</c> prints the ndnx version.
 /// </summary>
 public static class ArgParser
 {
@@ -35,6 +36,9 @@ public static class ArgParser
     public static Invocation Parse(IReadOnlyList<string> args)
     {
         ArgumentNullException.ThrowIfNull(args);
+
+        if (args.Count == 1 && IsBareVersionFlag(args[0]))
+            return Invocation.ToolVersion();
 
         string? packageId = null;
         string? identityVersion = null;
@@ -320,6 +324,14 @@ public static class ArgParser
         }
 
         return true;
+    }
+
+    static bool IsBareVersionFlag(string token)
+    {
+        var (option, inline) = SplitOption(token);
+        return option is not null
+            && option.Equals("--version", StringComparison.OrdinalIgnoreCase)
+            && inline is null;
     }
 
     static (string? Name, string? InlineValue) SplitOption(string token)

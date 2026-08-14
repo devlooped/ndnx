@@ -7,6 +7,7 @@ public sealed record Invocation
 {
     public bool Success { get; init; }
     public bool ShowHelp { get; init; }
+    public bool ShowVersion { get; init; }
     public bool Update { get; init; }
     public string? Error { get; init; }
 
@@ -35,5 +36,11 @@ public sealed record Invocation
     {
         Success = true,
         ShowHelp = true
+    };
+
+    public static Invocation ToolVersion() => new()
+    {
+        Success = true,
+        ShowVersion = true
     };
 }

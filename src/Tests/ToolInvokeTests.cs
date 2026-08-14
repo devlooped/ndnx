@@ -10,6 +10,28 @@ public class ToolInvokeTests : IClassFixture<HelloToolFeed>
     public ToolInvokeTests(HelloToolFeed feed) => this.feed = feed;
 
     [Fact]
+    public async Task Version_alone_prints_ndnx_version_and_does_not_launch()
+    {
+        var runner = new RecordingProcessRunner();
+        var host = new NdnxHost
+        {
+            WorkingDirectory = feed.Root,
+            StoreDirectory = NewStore(),
+            ProcessRunner = runner,
+            Out = new StringWriter(),
+            Error = new StringWriter(),
+            CurrentVersion = "0.2.0",
+        };
+
+        var code = await App.RunAsync(["--version"], host);
+
+        Assert.Equal(0, code);
+        Assert.Equal(0, runner.Calls);
+        Assert.Equal("0.2.0" + Environment.NewLine, host.Out.ToString());
+        Assert.Equal("", host.Error.ToString());
+    }
+
+    [Fact]
     public async Task Missing_package_operand_does_not_launch_a_child()
     {
         var runner = new RecordingProcessRunner();

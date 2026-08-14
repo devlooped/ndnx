@@ -34,6 +34,7 @@ public static class App
     const string Usage = """
         Usage: ndnx <PACKAGE_NAME[@VERSION]> [options] [--] [tool arguments]
                ndnx --update [VERSION]
+               ndnx --version
 
         Options:
           --source <SOURCE>          Override package sources
@@ -49,6 +50,7 @@ public static class App
           --no-http-cache            Do not use an HTTP cache
           --interactive              Allow interactive restore prompts
           --update [VERSION]         Self-update ndnx to the latest or given version
+          --version                  Print the ndnx version
         """;
 
     public static int Run(string[] args) => RunAsync(args).GetAwaiter().GetResult();
@@ -60,6 +62,12 @@ public static class App
         if (invocation.ShowHelp)
         {
             host.Out.WriteLine(Usage);
+            return 0;
+        }
+
+        if (invocation.ShowVersion)
+        {
+            host.Out.WriteLine(host.CurrentVersion ?? SelfUpdate.ReadCurrentVersion());
             return 0;
         }
 
