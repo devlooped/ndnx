@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using static System.Text.Json.Serialization.JsonIgnoreCondition;
 
 namespace ndnx;
 
@@ -56,7 +57,11 @@ sealed class RuntimeConfigFramework
     public string? Version { get; set; }
 }
 
-[JsonSourceGenerationOptions(PropertyNameCaseInsensitive = true)]
+[JsonSourceGenerationOptions(
+    PropertyNameCaseInsensitive = true,
+    PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
+    WriteIndented = true,
+    DefaultIgnoreCondition = WhenWritingNull)]
 [JsonSerializable(typeof(ServiceIndex))]
 [JsonSerializable(typeof(FlatContainerIndex))]
 [JsonSerializable(typeof(RuntimeGraphFile))]

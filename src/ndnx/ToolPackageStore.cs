@@ -1,4 +1,3 @@
-using System.IO.Compression;
 using System.Runtime.InteropServices;
 using System.Xml.Linq;
 
@@ -10,7 +9,7 @@ namespace ndnx;
 /// </summary>
 public sealed class ToolPackageStore
 {
-    public const string ReadyMarker = ".ndnx-ok";
+    public const string ReadyMarker = V3PackageLayout.MetadataFileName;
 
     readonly PackageFeed feed;
     readonly string storeDirectory;
@@ -52,7 +51,7 @@ public sealed class ToolPackageStore
             .First();
 
         var packageDirectory = GetPackageDirectory(selected.Id, selected.Version);
-        if (!IsCached(packageDirectory))
+        if (!V3PackageLayout.IsInstalled(packageDirectory, selected.Id, selected.Version))
         {
             log?.WriteLine($"Downloading {selected.Id} {selected.Version} from {selected.Source}");
             await DownloadAndExtractAsync(selected, packageDirectory, cancellationToken).ConfigureAwait(false);
@@ -66,10 +65,10 @@ public sealed class ToolPackageStore
     }
 
     public string GetPackageDirectory(string packageId, PackageVersion version)
-        => Path.Combine(storeDirectory, packageId.ToLowerInvariant(), version.ToString().ToLowerInvariant());
+        => V3PackageLayout.GetInstallPath(storeDirectory, packageId, version);
 
     public static bool IsCached(string packageDirectory)
-        => File.Exists(Path.Combine(packageDirectory, ReadyMarker));
+        => V3PackageLayout.IsInstalled(packageDirectory);
 
     async Task<ToolCommand> LocateOrHopAsync(
         string packageDirectory,
@@ -103,7 +102,7 @@ public sealed class ToolPackageStore
 
         var ridSelected = ridCandidates.OrderByDescending(c => c.Version).First();
         var ridDirectory = GetPackageDirectory(ridSelected.Id, ridSelected.Version);
-        if (!IsCached(ridDirectory))
+        if (!V3PackageLayout.IsInstalled(ridDirectory, ridSelected.Id, ridSelected.Version))
         {
             log?.WriteLine($"Downloading {ridSelected.Id} {ridSelected.Version} from {ridSelected.Source}");
             await DownloadAndExtractAsync(ridSelected, ridDirectory, cancellationToken).ConfigureAwait(false);
@@ -123,16 +122,19 @@ public sealed class ToolPackageStore
             Directory.Delete(staging, recursive: true);
         Directory.CreateDirectory(staging);
 
-        var nupkg = Path.Combine(staging, $"{package.Id.ToLowerInvariant()}.{package.Version}.nupkg");
+        var nupkg = Path.Combine(staging, V3PackageLayout.GetPackageFileName(package.Id, package.Version));
         await feed.DownloadAsync(package, nupkg, cancellationToken).ConfigureAwait(false);
-        ZipFile.ExtractToDirectory(nupkg, staging);
+        V3PackageLayout.ExtractContent(nupkg, staging);
+
+        var hash = V3PackageLayout.HashNupkg(nupkg);
+        V3PackageLayout.WriteHash(V3PackageLayout.GetHashPath(staging, package.Id, package.Version), hash);
+        V3PackageLayout.WriteMetadata(V3PackageLayout.GetMetadataPath(staging), hash, package.Source);
 
         if (Directory.Exists(packageDirectory))
             Directory.Delete(packageDirectory, recursive: true);
 
         Directory.CreateDirectory(Path.GetDirectoryName(packageDirectory)!);
         Directory.Move(staging, packageDirectory);
-        File.WriteAllText(Path.Combine(packageDirectory, ReadyMarker), package.Version.ToString());
     }
 
     ToolCommand LocateCommand(string packageDirectory, PackageIdentity package)

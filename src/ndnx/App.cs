@@ -19,12 +19,9 @@ public sealed class NdnxHost
 
     public static NdnxHost CreateDefault() => new();
 
-    public static string DefaultStoreDirectory()
+    public static string DefaultStoreDirectory(string? workingDirectory = null)
         => Environment.GetEnvironmentVariable("NDNX_STORE")
-           ?? Path.Combine(
-               Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-               "ndnx",
-               "store");
+           ?? GlobalPackagesFolder.Resolve(workingDirectory);
 }
 
 /// <summary>
