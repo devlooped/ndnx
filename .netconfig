@@ -29,9 +29,7 @@
 	skip
 [file "osmfeula.txt"]
 	url = https://github.com/devlooped/.github/blob/main/osmfeula.txt
-	sha = 666a2a7c315f72199c418f11482a950fc69a8901
-	etag = 91ea15c07bfd784036c6ca931f5b2df7e9767b8367146d96c79caef09d63899f
-	weak
+	skip
 [file ".editorconfig"]
 	url = https://github.com/devlooped/oss/blob/main/.editorconfig
 	sha = a62c45934ac2952f2f5d54d8aea4a7ebc1babaff
