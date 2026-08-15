@@ -85,6 +85,8 @@ public readonly record struct VersionRange(PackageVersion? Min, bool IncludeMin,
 {
     public bool IsExact => Min is { } min && Max is { } max && IncludeMin && IncludeMax && min.Equals(max);
 
+    public bool IsAny => Min is null && Max is null;
+
     public bool Matches(PackageVersion version)
     {
         if (version.IsPrerelease && !IncludePrerelease && !IsExact)

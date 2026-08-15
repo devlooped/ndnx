@@ -212,6 +212,59 @@ public class ToolInvokeTests : IClassFixture<HelloToolFeed>
         Assert.Equal(markerTime, File.GetLastWriteTimeUtc(Marker(store, HelloToolFeed.RidImplId)));
     }
 
+    [Theory]
+    [InlineData("hello-tool@1.0.0")]
+    [InlineData("hello-tool", "--version", "1.0.0")]
+    public async Task Exact_cached_version_skips_the_feed(params string[] identity)
+    {
+        var storeDir = NewStore();
+        await GetShippedAsync(storeDir, HelloToolFeed.PackageId);
+
+        var command = await GetWithThrowingFeedAsync(storeDir, [.. identity, "--yes", "--source", HttpFeed]);
+        Assert.True(File.Exists(command.EntryPointPath), command.EntryPointPath);
+    }
+
+    [Fact]
+    public async Task Exact_cached_rid_package_skips_the_feed()
+    {
+        var storeDir = NewStore();
+        await GetShippedAsync(storeDir, HelloToolFeed.RidWrapperId);
+
+        var command = await GetWithThrowingFeedAsync(
+            storeDir,
+            [HelloToolFeed.RidWrapperId + "@" + HelloToolFeed.PackageVersion, "--yes", "--source", HttpFeed]);
+        Assert.True(File.Exists(command.EntryPointPath), command.EntryPointPath);
+        Assert.Contains(
+            HelloToolFeed.RidImplId,
+            command.EntryPointPath,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("hello-tool")]
+    [InlineData("hello-tool@*")]
+    public async Task Latest_or_star_queries_the_feed_even_when_a_version_is_cached(string identity)
+    {
+        var storeDir = NewStore();
+        await GetShippedAsync(storeDir, HelloToolFeed.PackageId);
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => GetWithThrowingFeedAsync(storeDir, [identity, "--yes", "--source", HttpFeed]));
+        Assert.Contains("Unexpected HTTP", error.Message);
+    }
+
+    [Fact]
+    public async Task Exact_version_that_is_not_installed_queries_the_feed()
+    {
+        var storeDir = NewStore();
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => GetWithThrowingFeedAsync(
+                storeDir,
+                [HelloToolFeed.PackageId + "@" + HelloToolFeed.PackageVersion, "--yes", "--source", HttpFeed]));
+        Assert.Contains("Unexpected HTTP", error.Message);
+    }
+
     NdnxHost NewHost(IProcessRunner runner, string? store = null)
     {
         store ??= NewStore();
@@ -243,6 +296,8 @@ public class ToolInvokeTests : IClassFixture<HelloToolFeed>
         return [.. args];
     }
 
+    const string HttpFeed = "https://example.invalid/index.json";
+
     async Task<ToolCommand> GetShippedAsync(string storeDir, string packageId)
     {
         using var http = new HttpClient();
@@ -255,7 +310,22 @@ public class ToolInvokeTests : IClassFixture<HelloToolFeed>
         return await store.GetAsync(invocation, [feed.FeedDirectory]);
     }
 
+    static async Task<ToolCommand> GetWithThrowingFeedAsync(string storeDir, string[] args)
+    {
+        using var http = new HttpClient(new ThrowingHandler());
+        var store = new ToolPackageStore(new PackageFeed(http, ignoreFailedSources: false), storeDir);
+        var invocation = ArgParser.Parse(args);
+        Assert.True(invocation.Success, invocation.Error);
+        return await store.GetAsync(invocation, [HttpFeed]);
+    }
+
     static PackageFeed NullFeed() => new(new HttpClient(), ignoreFailedSources: false);
+
+    sealed class ThrowingHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            => throw new InvalidOperationException($"Unexpected HTTP {request.Method} {request.RequestUri}");
+    }
 
     static PackageVersion ParsedFixtureVersion()
         => PackageVersion.TryParse(HelloToolFeed.PackageVersion, out var parsed)

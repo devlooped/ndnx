@@ -39,11 +39,38 @@ public sealed class ToolPackageStore
         CancellationToken cancellationToken = default)
     {
         var range = VersionRange.FromInvocation(invocation);
-        var candidates = await feed.ListAsync(sources, invocation.PackageId!, range, cancellationToken).ConfigureAwait(false);
+        var packageId = invocation.PackageId!;
+
+        // Match dnx / GetBestPackageVersionAsync: an exact version (tool@1.2.3)
+        // is already the answer. Query the feed only for '*' / unspecified /
+        // ranges, or when that exact version is not installed.
+        if (range.IsExact && range.Min is { } exact
+            && TryCached(packageId, exact, sources, out var cached, out var cachedDirectory))
+        {
+            log?.WriteLine($"Using cached {cached.Id} {cached.Version}");
+            return await LocateOrHopAsync(cachedDirectory, cached, sources, cancellationToken).ConfigureAwait(false);
+        }
+
+        return await ResolveFromFeedAsync(packageId, range, sources, cancellationToken).ConfigureAwait(false);
+    }
+
+    public string GetPackageDirectory(string packageId, PackageVersion version)
+        => V3PackageLayout.GetInstallPath(storeDirectory, packageId, version);
+
+    public static bool IsCached(string packageDirectory)
+        => V3PackageLayout.IsInstalled(packageDirectory);
+
+    async Task<ToolCommand> ResolveFromFeedAsync(
+        string packageId,
+        VersionRange range,
+        IReadOnlyList<string> sources,
+        CancellationToken cancellationToken)
+    {
+        var candidates = await feed.ListAsync(sources, packageId, range, cancellationToken).ConfigureAwait(false);
         if (candidates.Count == 0)
         {
             throw new InvalidOperationException(
-                $"Package '{invocation.PackageId}' was not found on the configured sources.");
+                $"Package '{packageId}' was not found on the configured sources.");
         }
 
         var selected = candidates
@@ -64,11 +91,24 @@ public sealed class ToolPackageStore
         return await LocateOrHopAsync(packageDirectory, selected, sources, cancellationToken).ConfigureAwait(false);
     }
 
-    public string GetPackageDirectory(string packageId, PackageVersion version)
-        => V3PackageLayout.GetInstallPath(storeDirectory, packageId, version);
+    bool TryCached(
+        string packageId,
+        PackageVersion version,
+        IReadOnlyList<string> sources,
+        out PackageIdentity package,
+        out string packageDirectory)
+    {
+        packageDirectory = GetPackageDirectory(packageId, version);
+        if (!V3PackageLayout.IsInstalled(packageDirectory, packageId, version))
+        {
+            package = default!;
+            return false;
+        }
 
-    public static bool IsCached(string packageDirectory)
-        => V3PackageLayout.IsInstalled(packageDirectory);
+        var source = sources.Count > 0 ? sources[0] : "";
+        package = new PackageIdentity(packageId, version, source);
+        return true;
+    }
 
     async Task<ToolCommand> LocateOrHopAsync(
         string packageDirectory,
@@ -92,8 +132,14 @@ public sealed class ToolPackageStore
                 $"Package {package.Id} {package.Version} has no RID-specific package for '{hostRid}'. Declared RIDs: {declared}.");
         }
 
-        var ridRange = VersionRange.Exact(package.Version);
-        var ridCandidates = await feed.ListAsync(sources, ridPackageId, ridRange, cancellationToken).ConfigureAwait(false);
+        if (TryCached(ridPackageId, package.Version, sources, out var ridCached, out var ridCachedDirectory))
+        {
+            log?.WriteLine($"Using cached {ridCached.Id} {ridCached.Version}");
+            return LocateCommand(ridCachedDirectory, ridCached);
+        }
+
+        var ridExact = VersionRange.Exact(package.Version);
+        var ridCandidates = await feed.ListAsync(sources, ridPackageId, ridExact, cancellationToken).ConfigureAwait(false);
         if (ridCandidates.Count == 0)
         {
             throw new InvalidOperationException(
