@@ -1,6 +1,6 @@
 # ndnx
 
-[![Release](https://img.shields.io/github/v/release/devlooped/ndnx?include_prereleases)](https://github.com/devlooped/ndnx/releases)
+[![Release](https://img.shields.io/github/v/release/devlooped/ndnx?include_prereleases&color=darkmagenta)](https://github.com/devlooped/ndnx/releases)
 [![EULA](https://img.shields.io/badge/EULA-OSMF-blue?labelColor=black&color=C9FF30)](https://github.com/devlooped/oss/blob/main/osmfeula.txt)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/devlooped/oss/blob/main/license.txt)
 
