@@ -27,8 +27,29 @@ public class ToolInvokeTests : IClassFixture<HelloToolFeed>
 
         Assert.Equal(0, code);
         Assert.Equal(0, runner.Calls);
-        Assert.Equal("0.2.0" + Environment.NewLine, host.Out.ToString());
+        Assert.Equal("ndnx 0.2.0" + Environment.NewLine, host.Out.ToString());
         Assert.Equal("", host.Error.ToString());
+    }
+
+    [Fact]
+    public async Task Version_alone_includes_the_short_sha_from_informational_version()
+    {
+        var runner = new RecordingProcessRunner();
+        var host = new NdnxHost
+        {
+            WorkingDirectory = feed.Root,
+            StoreDirectory = NewStore(),
+            ProcessRunner = runner,
+            Out = new StringWriter(),
+            Error = new StringWriter(),
+            CurrentVersion = "0.2.0+abcdef1234567890",
+        };
+
+        var code = await App.RunAsync(["--version"], host);
+
+        Assert.Equal(0, code);
+        Assert.Equal(0, runner.Calls);
+        Assert.Equal("ndnx 0.2.0 (abcdef123)" + Environment.NewLine, host.Out.ToString());
     }
 
     [Fact]

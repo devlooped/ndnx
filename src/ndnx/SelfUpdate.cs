@@ -84,12 +84,36 @@ public static class SelfUpdate
     }
 
     public static string ReadCurrentVersion()
+        => NormalizeVersion(ReadInformationalVersion());
+
+    /// <summary>
+    /// <c>ndnx {version} ({short_sha})</c> when a commit is present, otherwise <c>ndnx {version}</c>.
+    /// </summary>
+    public static string FormatVersion(string? informational = null)
     {
-        var value = typeof(App).Assembly
-            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-            ?.InformationalVersion;
-        return NormalizeVersion(value ?? "0.0.0");
+        var value = informational ?? ReadInformationalVersion();
+        var plus = value.IndexOf('+');
+        var version = NormalizeVersion(plus >= 0 ? value[..plus] : value);
+        if (plus < 0)
+            return $"ndnx {version}";
+
+        var sha = value.AsSpan(plus + 1);
+        var separator = sha.IndexOfAny(".-+");
+        if (separator >= 0)
+            sha = sha[..separator];
+        if (sha.Length > 9)
+            sha = sha[..9];
+        if (sha.IsEmpty)
+            return $"ndnx {version}";
+
+        return $"ndnx {version} ({sha})";
     }
+
+    static string ReadInformationalVersion()
+        => typeof(App).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion
+            ?? "0.0.0";
 
     public static string ResolveExecutablePath()
     {

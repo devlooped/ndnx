@@ -9,6 +9,23 @@ public class SelfUpdateTests
     const string Repo = "devlooped/ndnx";
     const string Rid = "win-x64";
 
+    [Theory]
+    [InlineData("0.2.0", "ndnx 0.2.0")]
+    [InlineData("v0.2.0", "ndnx 0.2.0")]
+    [InlineData("0.2.0+abcdef123", "ndnx 0.2.0 (abcdef123)")]
+    [InlineData("0.2.0+abcdef1234567890", "ndnx 0.2.0 (abcdef123)")]
+    [InlineData("v0.2.0+abcdef123.dirty", "ndnx 0.2.0 (abcdef123)")]
+    public void FormatVersion_renders_ndnx_version_and_short_sha(string informational, string expected)
+        => Assert.Equal(expected, SelfUpdate.FormatVersion(informational));
+
+    [Fact]
+    public void FormatVersion_reads_assembly_informational_version()
+    {
+        var formatted = SelfUpdate.FormatVersion();
+        Assert.StartsWith("ndnx ", formatted);
+        Assert.Contains(SelfUpdate.ReadCurrentVersion(), formatted);
+    }
+
     [Fact]
     public async Task Update_to_latest_replaces_the_binary_and_prints_the_target_version()
     {

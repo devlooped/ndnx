@@ -70,7 +70,7 @@ public static class App
 
         if (invocation.ShowVersion)
         {
-            host.Out.WriteLine(host.CurrentVersion ?? SelfUpdate.ReadCurrentVersion());
+            host.Out.WriteLine(SelfUpdate.FormatVersion(host.CurrentVersion));
             return 0;
         }
 
