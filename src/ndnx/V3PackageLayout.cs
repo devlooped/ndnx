@@ -7,7 +7,8 @@ namespace ndnx;
 
 /// <summary>
 /// NuGet v3 global-packages layout: <c>{id}/{version}/{id}.{version}.nupkg</c>,
-/// <c>.nupkg.sha512</c> = Base64(SHA512(nupkg)), <c>.nupkg.metadata</c> last.
+/// <c>.nupkg.sha512</c> = Base64(SHA512(root nuspec)) — the dnx shortcut, not
+/// restore's hash of the whole nupkg — <c>.nupkg.metadata</c> last.
 /// </summary>
 public static class V3PackageLayout
 {
@@ -43,9 +44,20 @@ public static class V3PackageLayout
         => File.Exists(GetMetadataPath(installPath))
            || (Directory.Exists(installPath) && Directory.GetFiles(installPath, "*" + HashFileExtension).Length > 0);
 
-    public static string HashNupkg(string nupkgPath)
+    /// <summary>
+    /// SHA512 of the root <c>.nuspec</c>, Base64 — same as
+    /// <c>CryptoHashProvider("SHA512").CalculateHash(PackageArchiveReader.GetNuspec())</c>
+    /// in dnx. Tool packages can be large, and they are never part of a plain restore.
+    /// </summary>
+    public static string HashNuspec(string nupkgPath)
     {
-        using var stream = File.OpenRead(nupkgPath);
+        using var zip = ZipFile.OpenRead(nupkgPath);
+        var nuspec = zip.Entries.FirstOrDefault(e =>
+            e.FullName.EndsWith(".nuspec", StringComparison.OrdinalIgnoreCase)
+            && e.FullName.IndexOfAny(['/', '\\']) < 0)
+            ?? throw new InvalidOperationException($"Package '{nupkgPath}' is missing a root .nuspec.");
+
+        using var stream = nuspec.Open();
         return Convert.ToBase64String(SHA512.HashData(stream));
     }
 

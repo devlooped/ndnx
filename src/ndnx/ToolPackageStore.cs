@@ -230,7 +230,7 @@ public sealed class ToolPackageStore
 
         V3PackageLayout.ExtractContent(nupkg, staging);
 
-        var hash = V3PackageLayout.HashNupkg(nupkg);
+        var hash = V3PackageLayout.HashNuspec(nupkg);
         V3PackageLayout.WriteHash(V3PackageLayout.GetHashPath(staging, package.Id, package.Version), hash);
         V3PackageLayout.WriteMetadata(V3PackageLayout.GetMetadataPath(staging), hash, package.Source);
 

@@ -8,15 +8,41 @@ namespace Tests;
 public class V3PackageLayoutTests
 {
     [Fact]
-    public void Hash_is_base64_sha512_of_the_nupkg_bytes()
+    public void Hash_is_base64_sha512_of_the_root_nuspec()
     {
         using var dir = new TempDir();
         var nupkg = Path.Combine(dir.Path, "pkg.nupkg");
-        File.WriteAllBytes(nupkg, "hello-nupkg"u8.ToArray());
+        const string nuspec = """
+            <?xml version="1.0"?>
+            <package><metadata><id>pkg</id><version>1.0.0</version></metadata></package>
+            """;
+        using (var zip = ZipFile.Open(nupkg, ZipArchiveMode.Create))
+        {
+            WriteEntry(zip, "pkg.nuspec", nuspec);
+            WriteEntry(zip, "tools/net10.0/any/tool.dll", "payload-does-not-affect-hash");
+        }
 
-        var expected = Convert.ToBase64String(SHA512.HashData("hello-nupkg"u8.ToArray()));
-        Assert.Equal(expected, V3PackageLayout.HashNupkg(nupkg));
+        var expected = Convert.ToBase64String(SHA512.HashData(Encoding.UTF8.GetBytes(nuspec)));
+        Assert.Equal(expected, V3PackageLayout.HashNuspec(nupkg));
+        Assert.NotEqual(Convert.ToBase64String(SHA512.HashData(File.ReadAllBytes(nupkg))), expected);
         Assert.Equal(88, expected.Length);
+    }
+
+    [Fact]
+    public void Hash_ignores_nested_nuspec_entries()
+    {
+        using var dir = new TempDir();
+        var nupkg = Path.Combine(dir.Path, "pkg.nupkg");
+        const string root = "<package><metadata><id>root</id><version>1.0.0</version></metadata></package>";
+        using (var zip = ZipFile.Open(nupkg, ZipArchiveMode.Create))
+        {
+            WriteEntry(zip, "pkg.nuspec", root);
+            WriteEntry(zip, "content/other.nuspec", "<package />");
+        }
+
+        Assert.Equal(
+            Convert.ToBase64String(SHA512.HashData(Encoding.UTF8.GetBytes(root))),
+            V3PackageLayout.HashNuspec(nupkg));
     }
 
     [Fact]
@@ -129,7 +155,7 @@ public class V3PackageLayoutTests
     }
 
     [Fact]
-    public async Task Store_writes_restore_style_hash_and_reuses_it()
+    public async Task Store_writes_dnx_nuspec_hash_and_reuses_it()
     {
         using var dir = new TempDir();
         var feedDir = Path.Combine(dir.Path, "feed");
@@ -149,7 +175,7 @@ public class V3PackageLayoutTests
         var metaPath = V3PackageLayout.GetMetadataPath(install);
 
         Assert.True(File.Exists(nupkg));
-        Assert.Equal(V3PackageLayout.HashNupkg(nupkg), File.ReadAllText(hashPath));
+        Assert.Equal(V3PackageLayout.HashNuspec(nupkg), File.ReadAllText(hashPath));
         Assert.Contains(File.ReadAllText(hashPath), File.ReadAllText(metaPath));
         Assert.False(File.Exists(Path.Combine(install, "[Content_Types].xml")));
 
