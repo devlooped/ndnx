@@ -17,6 +17,18 @@ OSMF tier. A single fee covers all of [Devlooped packages](https://www.nuget.org
 
 <!-- https://github.com/devlooped/.github/raw/main/osmf.md -->
 <!-- #content -->
+`ndnx` is [`dnx`](https://learn.microsoft.com/dotnet/core/tools/dotnet-tool-exec) for
+native tools packaged and distributed as NuGet packages. Same one-shot CLI, same
+`PACKAGE[@VERSION]` identity, same restore flags, same global packages folder.
+
+If you can `dnx stop`, you can `ndnx stop`. `dotnet dnx` and `dotnet tool exec`
+are the same command; `ndnx` speaks that protocol, including RID-specific Native
+AOT tools (`stop`, `go`, `winget`) and ordinary framework-dependent tools
+(`dotnetsay`).
+
+A first run downloads into the NuGet cache. A later `ndnx tool@version` starts
+the cached binary — no SDK, no restore.
+
 ## Install
 
 macOS / Linux:
@@ -36,12 +48,64 @@ Native AOT binaries also ship as GitHub Release assets for winget, Scoop, and Ho
 ## Usage
 *ndnx*
 
+Same shape as `dnx` / `dotnet dnx` / `dotnet tool exec`:
+
+```bash
+dnx  stop -- --help
+ndnx stop -- --help
+
+dnx  stop@2.1.0 -- --help
+ndnx stop@2.1.0 -- --help
+
+dnx  dotnetsay@1.0.0 -- Hello
+ndnx dotnetsay@1.0.0 -- Hello
+```
+
+Pin a feed the same way (here the CI feed used for the timings below):
+
+```bash
+dnx  --source https://pkg.kzu.app/index.json stop@2.1.0 -- --help
+ndnx --source https://pkg.kzu.app/index.json stop@2.1.0 -- --help
+```
+
+`stop` is a Native AOT RID tool. `dotnetsay` is a classic framework-dependent
+tool. Both are just NuGet packages; ndnx picks the host RID and starts
+`Runner=executable` binaries directly, or `dotnet exec` for `Runner=dotnet`.
+
+An exact version already in the cache (`NUGET_PACKAGES`, then
+`nuget.config`'s `globalPackagesFolder`, then `~/.nuget/packages`) is not
+downloaded again. Packages written by `dnx` or `dotnet restore` are reused;
+packages written by ndnx are visible to them. Unspecified version or `@*`
+still asks the feed for latest, same as `dnx`.
+
+Shared flags: `--source`, `--add-source`, `--configfile`, `--version`,
+`--prerelease`, `--yes`/`-y`, `--allow-roll-forward`, `--verbosity`/`-v`,
+`--disable-parallel`, `--ignore-failed-sources`, `--no-http-cache`,
+`--interactive`.
+
 Self-update the installed binary (optional version, including downgrades):
 
 ```bash
 ndnx --update
 ndnx --update 0.1.0
 ```
+
+## Startup time
+
+Cold start is download + launch. Cached start is launch only, with an exact
+version so neither runner has to resolve latest.
+
+| Tool | Runner | Cold (download → start) | Cached (start) |
+| --- | --- | ---: | ---: |
+| `stop@2.1.0` (native AOT) | `dnx` | 5.6 s | 563 ms |
+| | `ndnx` | 5.6 s | **33 ms** |
+| `dotnetsay@1.0.0` (framework-dependent) | `dnx` | 4.6 s | 585 ms |
+| | `ndnx` | 4.8 s | **51 ms** |
+
+win-x64, .NET SDK 11.0.100-preview.6, isolated `NUGET_PACKAGES`, source
+`https://pkg.kzu.app/index.json`. Cold is the median of 3 empty-cache runs.
+Cached is the median of 10 runs after one seed. `stop` invoked as
+`-- --help`; `dotnetsay` as `-- ndnx`. `dnx` is the SDK script (`dotnet dnx`).
 <!-- #content -->
 ---
 <!-- include https://github.com/devlooped/sponsors/raw/main/footer.md -->
