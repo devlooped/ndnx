@@ -77,9 +77,7 @@ public static class App
 
         try
         {
-            using var http = host.HttpHandler is { } handler
-                ? new HttpClient(handler, disposeHandler: false)
-                : new HttpClient();
+            using var http = CreateHttpClient(host);
 
             if (invocation.Update)
                 return await SelfUpdate.RunAsync(invocation, host, http, cancellationToken).ConfigureAwait(false);
@@ -110,6 +108,14 @@ public static class App
             return 1;
         }
     }
+
+    static HttpClient CreateHttpClient(NdnxHost host)
+        => host.HttpHandler is { } handler
+            ? new HttpClient(handler, disposeHandler: false)
+            : new HttpClient(new SocketsHttpHandler
+            {
+                AutomaticDecompression = System.Net.DecompressionMethods.All,
+            });
 
     static bool IsDetailed(string? verbosity)
         => verbosity?.ToLowerInvariant() is "detailed" or "diagnostic" or "d" or "diag";
