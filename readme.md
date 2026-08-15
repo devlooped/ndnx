@@ -45,6 +45,15 @@ irm https://github.com/devlooped/ndnx/releases/latest/download/install.ps1 | iex
 
 Native AOT binaries also ship as GitHub Release assets for winget, Scoop, and Homebrew.
 
+## Update
+
+Self-update the installed binary (optional version, including downgrades):
+
+```bash
+ndnx --update
+ndnx --update 0.1.0
+```
+
 ## Usage
 *ndnx*
 
@@ -64,8 +73,8 @@ ndnx dotnetsay@1.0.0 -- Hello
 Pin a feed the same way (here the CI feed used for the timings below):
 
 ```bash
-dnx  --source https://pkg.kzu.app/index.json stop@2.1.0 -- --help
-ndnx --source https://pkg.kzu.app/index.json stop@2.1.0 -- --help
+dnx  --source https://kzu.blob.core.windows.net/nuget/index.json stop@2.1.0 -- --help
+ndnx --source https://kzu.blob.core.windows.net/nuget/index.json stop@2.1.0 -- --help
 ```
 
 `stop` is a Native AOT RID tool. `dotnetsay` is a classic framework-dependent
@@ -74,38 +83,35 @@ tool. Both are just NuGet packages; ndnx picks the host RID and starts
 
 An exact version already in the cache (`NUGET_PACKAGES`, then
 `nuget.config`'s `globalPackagesFolder`, then `~/.nuget/packages`) is not
-downloaded again. Packages written by `dnx` or `dotnet restore` are reused;
-packages written by ndnx are visible to them. Unspecified version or `@*`
-still asks the feed for latest, same as `dnx`.
+downloaded again. A first `tool@version` run builds the nupkg URL from the
+service index (cached for the process) and lists versions only if that GET
+is 404. Packages written by `dnx` or `dotnet restore` are reused; packages
+written by ndnx are visible to them. Unspecified version or `@*` still asks
+the feed for latest, same as `dnx`.
 
 Shared flags: `--source`, `--add-source`, `--configfile`, `--version`,
 `--prerelease`, `--yes`/`-y`, `--allow-roll-forward`, `--verbosity`/`-v`,
 `--disable-parallel`, `--ignore-failed-sources`, `--no-http-cache`,
 `--interactive`.
 
-Self-update the installed binary (optional version, including downgrades):
-
-```bash
-ndnx --update
-ndnx --update 0.1.0
-```
-
 ## Startup time
 
-Cold start is download + launch. Cached start is launch only, with an exact
-version so neither runner has to resolve latest.
+Cold is empty-cache download → start; cached is start only (`tool@version` so
+neither runner resolves latest). linux-x64 (WSL2) is SDK 10.0.110; win-x64 is
+SDK 10.0.303.
 
-| Tool | Runner | Cold (download → start) | Cached (start) |
-| --- | --- | ---: | ---: |
-| `stop@2.1.0` (native AOT) | `dnx` | 5.6 s | 563 ms |
-| | `ndnx` | 5.6 s | **33 ms** |
-| `dotnetsay@1.0.0` (framework-dependent) | `dnx` | 4.6 s | 585 ms |
-| | `ndnx` | 4.8 s | **51 ms** |
+| Tool | Runner | Cold linux-x64 | Cold win-x64 | Cached linux-x64 | Cached win-x64 |
+| --- | --- | ---: | ---: | ---: | ---: |
+| `stop@2.1.0` (native AOT) | `dnx` | 2.2 s | 2.1 s | 580 ms | 520 ms |
+| | `ndnx` | **1.2 s** | **1.5 s** | **10 ms** | **34 ms** |
+| `dotnetsay@1.0.0` (framework-dependent) | `dnx` | 1.6 s | 1.8 s | 570 ms | 545 ms |
+| | `ndnx` | **849 ms** | **1.1 s** | **12 ms** | **50 ms** |
 
-win-x64, .NET SDK 11.0.100-preview.6, isolated `NUGET_PACKAGES`, source
-`https://pkg.kzu.app/index.json`. Cold is the median of 3 empty-cache runs.
-Cached is the median of 10 runs after one seed. `stop` invoked as
-`-- --help`; `dotnetsay` as `-- ndnx`. `dnx` is the SDK script (`dotnet dnx`).
+Isolated `NUGET_PACKAGES`, source `https://kzu.blob.core.windows.net/nuget/index.json`.
+Cold is the median of 3 empty-cache runs. Cached is the median of 10 runs after
+one seed. `stop` invoked as `-- --help`; `dotnetsay` as `-- ndnx`. `dnx` is the
+SDK script (`dotnet dnx`).
+
 <!-- #content -->
 ---
 <!-- include https://github.com/devlooped/sponsors/raw/main/footer.md -->

@@ -66,6 +66,18 @@ public sealed class ToolPackageStore
         IReadOnlyList<string> sources,
         CancellationToken cancellationToken)
     {
+        if (range.IsExact && range.Min is { } exact)
+        {
+            var selected = await EnsurePackageAsync(packageId, exact, sources, tryExactUrl: true, cancellationToken)
+                .ConfigureAwait(false);
+            return await LocateOrHopAsync(
+                    GetPackageDirectory(selected.Id, selected.Version),
+                    selected,
+                    sources,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
         var candidates = await feed.ListAsync(sources, packageId, range, cancellationToken).ConfigureAwait(false);
         if (candidates.Count == 0)
         {
@@ -73,22 +85,22 @@ public sealed class ToolPackageStore
                 $"Package '{packageId}' was not found on the configured sources.");
         }
 
-        var selected = candidates
+        var listed = candidates
             .OrderByDescending(c => c.Version)
             .First();
 
-        var packageDirectory = GetPackageDirectory(selected.Id, selected.Version);
-        if (!V3PackageLayout.IsInstalled(packageDirectory, selected.Id, selected.Version))
+        var packageDirectory = GetPackageDirectory(listed.Id, listed.Version);
+        if (!V3PackageLayout.IsInstalled(packageDirectory, listed.Id, listed.Version))
         {
-            log?.WriteLine($"Downloading {selected.Id} {selected.Version} from {selected.Source}");
-            await DownloadAndExtractAsync(selected, packageDirectory, cancellationToken).ConfigureAwait(false);
+            log?.WriteLine($"Downloading {listed.Id} {listed.Version} from {listed.Source}");
+            await DownloadAndExtractAsync(listed, packageDirectory, cancellationToken).ConfigureAwait(false);
         }
         else
         {
-            log?.WriteLine($"Using cached {selected.Id} {selected.Version}");
+            log?.WriteLine($"Using cached {listed.Id} {listed.Version}");
         }
 
-        return await LocateOrHopAsync(packageDirectory, selected, sources, cancellationToken).ConfigureAwait(false);
+        return await LocateOrHopAsync(packageDirectory, listed, sources, cancellationToken).ConfigureAwait(false);
     }
 
     bool TryCached(
@@ -132,36 +144,77 @@ public sealed class ToolPackageStore
                 $"Package {package.Id} {package.Version} has no RID-specific package for '{hostRid}'. Declared RIDs: {declared}.");
         }
 
-        if (TryCached(ridPackageId, package.Version, sources, out var ridCached, out var ridCachedDirectory))
+        var ridSelected = await EnsurePackageAsync(
+                ridPackageId,
+                package.Version,
+                sources,
+                tryExactUrl: true,
+                cancellationToken)
+            .ConfigureAwait(false);
+        return LocateCommand(GetPackageDirectory(ridSelected.Id, ridSelected.Version), ridSelected);
+    }
+
+    async Task<PackageIdentity> EnsurePackageAsync(
+        string packageId,
+        PackageVersion version,
+        IReadOnlyList<string> sources,
+        bool tryExactUrl,
+        CancellationToken cancellationToken)
+    {
+        var packageDirectory = GetPackageDirectory(packageId, version);
+        if (V3PackageLayout.IsInstalled(packageDirectory, packageId, version))
         {
-            log?.WriteLine($"Using cached {ridCached.Id} {ridCached.Version}");
-            return LocateCommand(ridCachedDirectory, ridCached);
+            log?.WriteLine($"Using cached {packageId} {version}");
+            var source = sources.Count > 0 ? sources[0] : "";
+            return new PackageIdentity(packageId, version, source);
         }
 
-        var ridExact = VersionRange.Exact(package.Version);
-        var ridCandidates = await feed.ListAsync(sources, ridPackageId, ridExact, cancellationToken).ConfigureAwait(false);
-        if (ridCandidates.Count == 0)
+        if (tryExactUrl)
+        {
+            foreach (var source in sources)
+            {
+                var identity = new PackageIdentity(packageId, version, source);
+                log?.WriteLine($"Downloading {identity.Id} {identity.Version} from {identity.Source}");
+                if (await TryDownloadAndExtractAsync(identity, packageDirectory, cancellationToken).ConfigureAwait(false))
+                    return identity;
+            }
+
+            log?.WriteLine($"Exact {packageId} {version} was not at the constructed URL; listing versions");
+        }
+
+        var candidates = await feed.ListAsync(sources, packageId, VersionRange.Exact(version), cancellationToken)
+            .ConfigureAwait(false);
+        if (candidates.Count == 0)
         {
             throw new InvalidOperationException(
-                $"RID-specific package '{ridPackageId}' {package.Version} was not found on the configured sources.");
+                $"Package '{packageId}' was not found on the configured sources.");
         }
 
-        var ridSelected = ridCandidates.OrderByDescending(c => c.Version).First();
-        var ridDirectory = GetPackageDirectory(ridSelected.Id, ridSelected.Version);
-        if (!V3PackageLayout.IsInstalled(ridDirectory, ridSelected.Id, ridSelected.Version))
+        var selected = candidates.OrderByDescending(c => c.Version).First();
+        packageDirectory = GetPackageDirectory(selected.Id, selected.Version);
+        if (!V3PackageLayout.IsInstalled(packageDirectory, selected.Id, selected.Version))
         {
-            log?.WriteLine($"Downloading {ridSelected.Id} {ridSelected.Version} from {ridSelected.Source}");
-            await DownloadAndExtractAsync(ridSelected, ridDirectory, cancellationToken).ConfigureAwait(false);
+            log?.WriteLine($"Downloading {selected.Id} {selected.Version} from {selected.Source}");
+            await DownloadAndExtractAsync(selected, packageDirectory, cancellationToken).ConfigureAwait(false);
         }
         else
         {
-            log?.WriteLine($"Using cached {ridSelected.Id} {ridSelected.Version}");
+            log?.WriteLine($"Using cached {selected.Id} {selected.Version}");
         }
 
-        return LocateCommand(ridDirectory, ridSelected);
+        return selected;
     }
 
     async Task DownloadAndExtractAsync(PackageIdentity package, string packageDirectory, CancellationToken cancellationToken)
+    {
+        if (!await TryDownloadAndExtractAsync(package, packageDirectory, cancellationToken).ConfigureAwait(false))
+        {
+            throw new FileNotFoundException(
+                $"Package {package.Id} {package.Version} was not found in '{package.Source}'.");
+        }
+    }
+
+    async Task<bool> TryDownloadAndExtractAsync(PackageIdentity package, string packageDirectory, CancellationToken cancellationToken)
     {
         var staging = packageDirectory + ".staging";
         if (Directory.Exists(staging))
@@ -169,7 +222,12 @@ public sealed class ToolPackageStore
         Directory.CreateDirectory(staging);
 
         var nupkg = Path.Combine(staging, V3PackageLayout.GetPackageFileName(package.Id, package.Version));
-        await feed.DownloadAsync(package, nupkg, cancellationToken).ConfigureAwait(false);
+        if (!await feed.TryDownloadAsync(package, nupkg, cancellationToken).ConfigureAwait(false))
+        {
+            Directory.Delete(staging, recursive: true);
+            return false;
+        }
+
         V3PackageLayout.ExtractContent(nupkg, staging);
 
         var hash = V3PackageLayout.HashNupkg(nupkg);
@@ -181,6 +239,7 @@ public sealed class ToolPackageStore
 
         Directory.CreateDirectory(Path.GetDirectoryName(packageDirectory)!);
         Directory.Move(staging, packageDirectory);
+        return true;
     }
 
     ToolCommand LocateCommand(string packageDirectory, PackageIdentity package)

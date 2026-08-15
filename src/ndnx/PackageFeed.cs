@@ -1,4 +1,6 @@
+using System.Collections.Concurrent;
 using System.IO.Compression;
+using System.Net;
 using System.Net.Http.Json;
 using System.Xml.Linq;
 
@@ -14,6 +16,7 @@ public sealed class PackageFeed
     readonly HttpClient http;
     readonly bool ignoreFailedSources;
     readonly TextWriter? log;
+    readonly ConcurrentDictionary<string, Task<string>> packageBaseAddresses = new(StringComparer.OrdinalIgnoreCase);
 
     public PackageFeed(HttpClient http, bool ignoreFailedSources, TextWriter? log = null)
     {
@@ -58,22 +61,42 @@ public sealed class PackageFeed
 
     public async Task DownloadAsync(PackageIdentity package, string destinationNupkg, CancellationToken cancellationToken = default)
     {
+        if (!await TryDownloadAsync(package, destinationNupkg, cancellationToken).ConfigureAwait(false))
+        {
+            throw new FileNotFoundException(
+                $"Package {package.Id} {package.Version} was not found in '{package.Source}'.");
+        }
+    }
+
+    /// <summary>
+    /// Downloads <paramref name="package"/> to <paramref name="destinationNupkg"/> without listing
+    /// versions. HTTP 404 (or a missing local nupkg) returns <c>false</c> so the caller can
+    /// fall back to <see cref="ListAsync"/>.
+    /// </summary>
+    public async Task<bool> TryDownloadAsync(PackageIdentity package, string destinationNupkg, CancellationToken cancellationToken = default)
+    {
         Directory.CreateDirectory(Path.GetDirectoryName(destinationNupkg)!);
 
         if (Directory.Exists(package.Source))
         {
-            var nupkg = FindLocalNupkg(package.Source, package.Id, package.Version)
-                ?? throw new FileNotFoundException($"Package {package.Id} {package.Version} was not found in '{package.Source}'.");
+            var nupkg = FindLocalNupkg(package.Source, package.Id, package.Version);
+            if (nupkg is null)
+                return false;
+
             File.Copy(nupkg, destinationNupkg, overwrite: true);
-            return;
+            return true;
         }
 
         var url = await GetPackageUrlAsync(package, cancellationToken).ConfigureAwait(false);
         using var response = await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+            return false;
+
         response.EnsureSuccessStatusCode();
         await using var input = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         await using var output = File.Create(destinationNupkg);
         await input.CopyToAsync(output, cancellationToken).ConfigureAwait(false);
+        return true;
     }
 
     IEnumerable<PackageIdentity> ListLocal(string directory, string packageId, VersionRange range)
@@ -148,6 +171,20 @@ public sealed class PackageFeed
         if (!source.Contains("index.json", StringComparison.OrdinalIgnoreCase))
             return EnsureTrailingSlash(source);
 
+        var cached = packageBaseAddresses.GetOrAdd(source, s => FetchPackageBaseAddressAsync(s, cancellationToken));
+        try
+        {
+            return await cached.ConfigureAwait(false);
+        }
+        catch
+        {
+            packageBaseAddresses.TryRemove(KeyValuePair.Create(source, cached));
+            throw;
+        }
+    }
+
+    async Task<string> FetchPackageBaseAddressAsync(string source, CancellationToken cancellationToken)
+    {
         var index = await http.GetFromJsonAsync(source, NuGetJsonContext.Default.ServiceIndex, cancellationToken).ConfigureAwait(false);
         var resource = index?.Resources?.FirstOrDefault(r =>
             r.Type is not null && r.Type.StartsWith("PackageBaseAddress", StringComparison.OrdinalIgnoreCase));
