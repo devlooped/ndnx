@@ -1,5 +1,9 @@
 # Changelog
 
+## [v0.3.0](https://github.com/devlooped/ndnx/tree/v0.3.0) (2026-08-15)
+
+[Full Changelog](https://github.com/devlooped/ndnx/compare/v0.2.0...v0.3.0)
+
 ## [v0.2.0](https://github.com/devlooped/ndnx/tree/v0.2.0) (2026-08-14)
 
 [Full Changelog](https://github.com/devlooped/ndnx/compare/v0.1.1...v0.2.0)
