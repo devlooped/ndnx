@@ -38,9 +38,28 @@ sealed class GitHubRelease
     public string? TagName { get; set; }
 }
 
+sealed class RuntimeConfigFile
+{
+    public RuntimeConfigOptions? RuntimeOptions { get; set; }
+}
+
+sealed class RuntimeConfigOptions
+{
+    public string? Tfm { get; set; }
+    public RuntimeConfigFramework? Framework { get; set; }
+    public RuntimeConfigFramework[]? Frameworks { get; set; }
+}
+
+sealed class RuntimeConfigFramework
+{
+    public string? Name { get; set; }
+    public string? Version { get; set; }
+}
+
 [JsonSourceGenerationOptions(PropertyNameCaseInsensitive = true)]
 [JsonSerializable(typeof(ServiceIndex))]
 [JsonSerializable(typeof(FlatContainerIndex))]
 [JsonSerializable(typeof(RuntimeGraphFile))]
 [JsonSerializable(typeof(GitHubRelease))]
+[JsonSerializable(typeof(RuntimeConfigFile))]
 sealed partial class NuGetJsonContext : JsonSerializerContext;

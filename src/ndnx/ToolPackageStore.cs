@@ -15,12 +15,21 @@ public sealed class ToolPackageStore
     readonly PackageFeed feed;
     readonly string storeDirectory;
     readonly TextWriter? log;
+    readonly string? muxerPath;
+    readonly string hostRid;
 
-    public ToolPackageStore(PackageFeed feed, string storeDirectory, TextWriter? log = null)
+    public ToolPackageStore(
+        PackageFeed feed,
+        string storeDirectory,
+        TextWriter? log = null,
+        string? muxerPath = null,
+        string? hostRid = null)
     {
         this.feed = feed;
         this.storeDirectory = storeDirectory;
         this.log = log;
+        this.muxerPath = muxerPath ?? DotnetMuxer.Resolve();
+        this.hostRid = hostRid ?? RuntimeInformation.RuntimeIdentifier;
     }
 
     public string StoreDirectory => storeDirectory;
@@ -76,7 +85,6 @@ public sealed class ToolPackageStore
         if (settings.RidPackages.Count == 0 || !string.IsNullOrEmpty(settings.Runner))
             return LocateCommand(packageDirectory, package);
 
-        var hostRid = RuntimeInformation.RuntimeIdentifier;
         var ridPackageId = RidPackageResolver.Resolve(hostRid, settings.RidPackages);
         if (ridPackageId is null)
         {
@@ -127,7 +135,7 @@ public sealed class ToolPackageStore
         File.WriteAllText(Path.Combine(packageDirectory, ReadyMarker), package.Version.ToString());
     }
 
-    internal static ToolCommand LocateCommand(string packageDirectory, PackageIdentity package)
+    ToolCommand LocateCommand(string packageDirectory, PackageIdentity package)
     {
         var settingsPath = FindSettings(packageDirectory)
             ?? throw new InvalidOperationException(
@@ -151,6 +159,8 @@ public sealed class ToolPackageStore
         // the payload executable. ZipFile.ExtractToDirectory keeps 0644.
         if (string.Equals(settings.Runner, "executable", StringComparison.OrdinalIgnoreCase))
             EnsureUnixExecuteBits(Path.GetDirectoryName(entryPoint)!);
+        else if (string.Equals(settings.Runner, "dotnet", StringComparison.OrdinalIgnoreCase))
+            FrameworkDependentGuard.EnsureCanExecute(entryPoint, settingsPath, muxerPath);
 
         return new ToolCommand(settings.Name, entryPoint, settings.Runner);
     }
@@ -167,46 +177,10 @@ public sealed class ToolPackageStore
         }
     }
 
-    static string? FindSettings(string packageDirectory)
+    string? FindSettings(string packageDirectory)
     {
         var files = Directory.GetFiles(packageDirectory, "DotnetToolSettings.xml", SearchOption.AllDirectories);
-        if (files.Length == 0)
-            return null;
-
-        var rid = RuntimeInformation.RuntimeIdentifier;
-        return files
-            .OrderByDescending(Score)
-            .First();
-
-        int Score(string path)
-        {
-            var score = 0;
-            var normalized = path.Replace('\\', '/');
-            if (normalized.Contains('/' + rid + '/', StringComparison.OrdinalIgnoreCase))
-                score += 1000;
-            else if (normalized.Contains("/any/", StringComparison.OrdinalIgnoreCase))
-                score += 500;
-
-            foreach (var (tfm, points) in new[]
-            {
-                ("net11.0", 110),
-                ("net10.0", 100),
-                ("net9.0", 90),
-                ("net8.0", 80),
-                ("net7.0", 70),
-                ("net6.0", 60),
-                ("netcoreapp", 10),
-            })
-            {
-                if (normalized.Contains('/' + tfm + '/', StringComparison.OrdinalIgnoreCase))
-                {
-                    score += points;
-                    break;
-                }
-            }
-
-            return score;
-        }
+        return ToolSettingsLocator.Choose(files, hostRid, muxerPath);
     }
 
     static ToolSettings ReadSettings(string path)

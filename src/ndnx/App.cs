@@ -15,6 +15,7 @@ public sealed class NdnxHost
     public string? CurrentVersion { get; init; }
     public string? UpdateRepository { get; init; }
     public string? RuntimeIdentifier { get; init; }
+    public string? DotnetMuxer { get; init; }
 
     public static NdnxHost CreateDefault() => new();
 
@@ -89,13 +90,15 @@ public static class App
             var log = IsDetailed(invocation.Verbosity) ? host.Out : null;
             var sources = PackageSources.Resolve(invocation, host.WorkingDirectory);
             var feed = new PackageFeed(http, invocation.IgnoreFailedSources, log);
-            var store = new ToolPackageStore(feed, host.StoreDirectory, log);
+            var muxer = host.DotnetMuxer ?? DotnetMuxer.Resolve();
+            var store = new ToolPackageStore(feed, host.StoreDirectory, log, muxer, host.RuntimeIdentifier);
             var command = await store.GetAsync(invocation, sources, cancellationToken).ConfigureAwait(false);
             var settings = ToolLauncher.CreateStartSettings(
                 command,
                 invocation.ForwardedArguments,
                 invocation.AllowRollForward,
-                host.WorkingDirectory);
+                host.WorkingDirectory,
+                muxer);
 
             if (log is not null)
                 log.WriteLine($"Starting {settings.FileName} {string.Join(' ', settings.Arguments)}");

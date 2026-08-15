@@ -14,14 +14,15 @@ public static class ToolLauncher
         ToolCommand command,
         IReadOnlyList<string> forwardedArguments,
         bool allowRollForward,
-        string? workingDirectory = null)
+        string? workingDirectory = null,
+        string? muxerPath = null)
     {
         ArgumentNullException.ThrowIfNull(command);
         ArgumentNullException.ThrowIfNull(forwardedArguments);
 
         return command.Runner switch
         {
-            "dotnet" => CreateDotnet(command.EntryPointPath, forwardedArguments, allowRollForward, workingDirectory),
+            "dotnet" => CreateDotnet(command.EntryPointPath, forwardedArguments, allowRollForward, workingDirectory, muxerPath),
             "executable" => CreateInherited(command.EntryPointPath, forwardedArguments, workingDirectory),
             _ => throw new InvalidOperationException(
                 $"Unsupported tool runner '{command.Runner}' for command '{command.Name}'."),
@@ -32,7 +33,8 @@ public static class ToolLauncher
         string entryPoint,
         IReadOnlyList<string> forwardedArguments,
         bool allowRollForward,
-        string? workingDirectory)
+        string? workingDirectory,
+        string? muxerPath)
     {
         var arguments = new List<string>();
         if (allowRollForward)
@@ -45,7 +47,7 @@ public static class ToolLauncher
         arguments.Add(entryPoint);
         arguments.AddRange(forwardedArguments);
 
-        return CreateInherited(ResolveDotnetMuxer(), arguments, workingDirectory);
+        return CreateInherited(muxerPath ?? DotnetMuxer.Resolve() ?? DotnetMuxer.FileName, arguments, workingDirectory);
     }
 
     static ProcessStartSettings CreateInherited(string fileName, IReadOnlyList<string> arguments, string? workingDirectory) => new()
@@ -58,35 +60,4 @@ public static class ToolLauncher
         RedirectStandardError = false,
         WorkingDirectory = workingDirectory,
     };
-
-    static string ResolveDotnetMuxer()
-    {
-        var fileName = OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet";
-        foreach (var root in new[]
-        {
-            Environment.GetEnvironmentVariable("DOTNET_ROOT"),
-            Environment.GetEnvironmentVariable("DOTNET_ROOT(x86)"),
-        })
-        {
-            if (string.IsNullOrEmpty(root))
-                continue;
-
-            var candidate = Path.Combine(root, fileName);
-            if (File.Exists(candidate))
-                return candidate;
-        }
-
-        var path = Environment.GetEnvironmentVariable("PATH");
-        if (path is not null)
-        {
-            foreach (var directory in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
-            {
-                var candidate = Path.Combine(directory, fileName);
-                if (File.Exists(candidate))
-                    return candidate;
-            }
-        }
-
-        return OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet";
-    }
 }
