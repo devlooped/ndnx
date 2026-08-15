@@ -269,7 +269,7 @@ public sealed class ToolPackageStore
         else if (string.Equals(settings.Runner, "dotnet", StringComparison.OrdinalIgnoreCase))
             FrameworkDependentGuard.EnsureCanExecute(entryPoint, settingsPath, muxerPath);
 
-        return new ToolCommand(settings.Name, entryPoint, settings.Runner);
+        return new ToolCommand(settings.Name, entryPoint, settings.Runner, package.Version);
     }
 
     static void EnsureUnixExecuteBits(string directory)

@@ -31,4 +31,16 @@ public class VersionRangeTests
         Assert.Equal(new PackageVersion(1, 2, 3, null), range.Min);
         Assert.Equal(range.Min, range.Max);
     }
+
+    [Theory]
+    [InlineData("dotnetsay")]
+    [InlineData("dotnetsay@*")]
+    [InlineData("dotnetsay@*-*")]
+    [InlineData("dotnetsay", "--version", "*")]
+    [InlineData("dotnetsay", "--version", "[1.0,2.0)")]
+    public void Floating_identities_are_not_exact(params string[] args)
+    {
+        var range = VersionRange.FromInvocation(ArgParser.Parse(args));
+        Assert.False(range.IsExact);
+    }
 }

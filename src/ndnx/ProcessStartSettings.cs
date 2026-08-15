@@ -40,6 +40,7 @@ public sealed record ProcessStartSettings
 public interface IProcessRunner
 {
     int Run(ProcessStartSettings settings);
+    IChildProcess Start(ProcessStartSettings settings);
 }
 
 public sealed class ProcessRunner : IProcessRunner
@@ -47,8 +48,21 @@ public sealed class ProcessRunner : IProcessRunner
     public int Run(ProcessStartSettings settings)
     {
         using var process = new Process { StartInfo = settings.ToStartInfo() };
-        process.Start();
+        if (!process.Start())
+            throw new InvalidOperationException($"Failed to start '{settings.FileName}'.");
         process.WaitForExit();
         return process.ExitCode;
+    }
+
+    public IChildProcess Start(ProcessStartSettings settings)
+    {
+        var process = new Process { StartInfo = settings.ToStartInfo() };
+        if (!process.Start())
+        {
+            process.Dispose();
+            throw new InvalidOperationException($"Failed to start '{settings.FileName}'.");
+        }
+
+        return new ChildProcess(process);
     }
 }

@@ -73,8 +73,24 @@ An exact version already in the cache (`NUGET_PACKAGES`, then
 downloaded again. A first `tool@version` run builds the nupkg URL from the
 service index (cached for the process) and lists versions only if that GET
 is 404. Packages written by `dnx` or `dotnet restore` are reused; packages
-written by ndnx are visible to them. Unspecified version or `@*` still asks
-the feed for latest, same as `dnx`.
+written by ndnx are visible to them.
+
+A floating version — unspecified, `@*`, `@*-*`, or a NuGet range — stays
+current. ndnx starts the latest match, watches the feed, downloads a newer
+matching version *before* stopping the child, then sends SIGINT / Ctrl+C
+(and `WM_CLOSE` if the tool is a GUI) and restarts. Short tools still exit
+as soon as the child exits. Pin an exact version (`tool@2.1.0`) to disable
+that loop.
+
+The poll interval defaults to 5 seconds and can be set in `.netconfig`:
+
+```
+[ndnx]
+    interval = 5
+```
+
+ndnx walks from the working directory up, then `~/.netconfig`. `--verbosity
+quiet` hides the `Updating …` line.
 
 Shared flags: `--source`, `--add-source`, `--configfile`, `--version`,
 `--prerelease`, `--yes`/`-y`, `--allow-roll-forward`, `--verbosity`/`-v`,

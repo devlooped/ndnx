@@ -3,7 +3,7 @@ namespace ndnx;
 /// <summary>
 /// Command declared by a downloaded tool package.
 /// </summary>
-public sealed record ToolCommand(string Name, string EntryPointPath, string Runner);
+public sealed record ToolCommand(string Name, string EntryPointPath, string Runner, PackageVersion Version = default);
 
 /// <summary>
 /// Builds the process-start settings used to invoke a packaged tool command.

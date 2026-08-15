@@ -9,6 +9,11 @@
     <StackTraceSupport>true</StackTraceSupport>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <AssemblyName>ndnx</AssemblyName>
+    <_NdnxWindows>false</_NdnxWindows>
+    <_NdnxWindows Condition="$([MSBuild]::IsOSPlatform('Windows'))">true</_NdnxWindows>
+    <_NdnxWindows Condition="$(RuntimeIdentifier.StartsWith('win'))">true</_NdnxWindows>
+    <_NdnxWindows Condition="$(RuntimeIdentifier) != '' and !$(RuntimeIdentifier.StartsWith('win'))">false</_NdnxWindows>
+    <DefineConstants Condition="'$(_NdnxWindows)' == 'true'">$(DefineConstants);NDNX_WINDOWS</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <EmbeddedResource Include="PortableRuntimeIdentifierGraph.json" LogicalName="PortableRuntimeIdentifierGraph.json" />

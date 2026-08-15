@@ -16,6 +16,8 @@ public sealed class NdnxHost
     public string? UpdateRepository { get; init; }
     public string? RuntimeIdentifier { get; init; }
     public string? DotnetMuxer { get; init; }
+    public TimeSpan? UpdateInterval { get; init; }
+    public TimeSpan StopTimeout { get; init; } = TimeSpan.FromSeconds(5);
 
     public static NdnxHost CreateDefault() => new();
 
@@ -33,6 +35,9 @@ public static class App
         Usage: ndnx <PACKAGE_NAME[@VERSION]> [options] [--] [tool arguments]
                ndnx --update [VERSION]
                ndnx --version
+
+        A floating version (unspecified, @*, @*-*, or a range) stays current:
+        ndnx watches the feed and restarts the tool when a newer match appears.
 
         Options:
           --source <SOURCE>          Override package sources
@@ -88,6 +93,14 @@ public static class App
             var muxer = host.DotnetMuxer ?? DotnetMuxer.Resolve();
             var store = new ToolPackageStore(feed, host.StoreDirectory, log, muxer, host.RuntimeIdentifier);
             var command = await store.GetAsync(invocation, sources, cancellationToken).ConfigureAwait(false);
+            var range = VersionRange.FromInvocation(invocation);
+            if (!range.IsExact)
+            {
+                return await Evergreen.RunAsync(
+                    invocation, host, store, sources, command, muxer, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+
             var settings = ToolLauncher.CreateStartSettings(
                 command,
                 invocation.ForwardedArguments,
