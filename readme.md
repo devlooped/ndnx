@@ -30,8 +30,6 @@ Windows (PowerShell):
 irm https://github.com/devlooped/ndnx/releases/latest/download/install.ps1 | iex
 ```
 
-Native AOT binaries also ship as GitHub Release assets for winget, Scoop, and Homebrew.
-
 ## Update
 
 Self-update the installed binary (optional version, including downgrades):
@@ -109,11 +107,17 @@ SDK 10.0.303.
 | | `ndnx` | **1.2 s** | **1.5 s** | **10 ms** | **34 ms** |
 | `dotnetsay@1.0.0` (framework-dependent) | `dnx` | 1.6 s | 1.8 s | 570 ms | 545 ms |
 | | `ndnx` | **849 ms** | **1.1 s** | **12 ms** | **50 ms** |
+| `winget` (native AOT TUI, Windows) | `dnx` | — | 2.7 s | — | 820 ms |
+| | `ndnx` | — | **1.2 s** | — | **275 ms** |
 
-Isolated `NUGET_PACKAGES`, source `https://kzu.blob.core.windows.net/nuget/index.json`.
+Isolated `NUGET_PACKAGES`. `stop` / `dotnetsay` from
+`https://kzu.blob.core.windows.net/nuget/index.json`; `winget` from nuget.org.
 Cold is the median of 3 empty-cache runs. Cached is the median of 10 runs after
-one seed. `stop` invoked as `-- --help`; `dotnetsay` as `-- ndnx`. `dnx` is the
-SDK script (`dotnet dnx`).
+one seed. `stop` invoked as `-- --help`; `dotnetsay` as `-- ndnx`. `winget` is
+a TUI so it does not exit on its own: cold is `winget` (latest), cached is
+`winget@0.13.2`; each run waits until `winget-tui` is up, then `ndnx stop@2.1.0`
+signals that PID and the clock stops when the runner exits. `dnx` is the SDK
+script (`dotnet dnx`). `winget` timings are win-x64 SDK 11.0.100-preview.
 
 <!-- #content -->
 ---
