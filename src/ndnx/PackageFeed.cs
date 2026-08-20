@@ -141,7 +141,17 @@ public sealed class PackageFeed
         var baseAddress = await GetPackageBaseAddressAsync(source, cancellationToken).ConfigureAwait(false);
         var id = packageId.ToLowerInvariant();
         var indexUrl = $"{baseAddress}{id}/index.json";
-        var index = await http.GetFromJsonAsync(indexUrl, NuGetJsonContext.Default.FlatContainerIndex, cancellationToken).ConfigureAwait(false);
+        using var response = await http.GetAsync(indexUrl, cancellationToken).ConfigureAwait(false);
+        // nuget.org 404s the flat-container index when the package ID has never been
+        // listed. Treat that as an empty version list so callers can report not-found
+        // the way dnx does, instead of leaking EnsureSuccessStatusCode's 404.
+        if (response.StatusCode == HttpStatusCode.NotFound)
+            return [];
+
+        response.EnsureSuccessStatusCode();
+        var index = await response.Content.ReadFromJsonAsync(
+                NuGetJsonContext.Default.FlatContainerIndex, cancellationToken)
+            .ConfigureAwait(false);
         if (index?.Versions is null)
             return [];
 
