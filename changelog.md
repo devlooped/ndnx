@@ -1,5 +1,17 @@
 # Changelog
 
+## [v0.6.2](https://github.com/devlooped/ndnx/tree/v0.6.2) (2026-08-20)
+
+[Full Changelog](https://github.com/devlooped/ndnx/compare/v0.6.1...v0.6.2)
+
+:sparkles: Implemented enhancements:
+
+- Report a dnx-style error when a tool version is missing from the feed [\#8](https://github.com/devlooped/ndnx/pull/8) (@kzu)
+
+## [v0.6.1](https://github.com/devlooped/ndnx/tree/v0.6.1) (2026-08-20)
+
+[Full Changelog](https://github.com/devlooped/ndnx/compare/v0.6.0...v0.6.1)
+
 ## [v0.6.0](https://github.com/devlooped/ndnx/tree/v0.6.0) (2026-08-15)
 
 [Full Changelog](https://github.com/devlooped/ndnx/compare/v0.5.2...v0.6.0)
