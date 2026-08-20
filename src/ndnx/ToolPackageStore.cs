@@ -186,8 +186,7 @@ public sealed class ToolPackageStore
             .ConfigureAwait(false);
         if (candidates.Count == 0)
         {
-            throw new InvalidOperationException(
-                $"Package '{packageId}' was not found on the configured sources.");
+            throw new InvalidOperationException(FormatVersionNotFound(packageId, version, sources));
         }
 
         var selected = candidates.OrderByDescending(c => c.Version).First();
@@ -288,6 +287,12 @@ public sealed class ToolPackageStore
     {
         var files = Directory.GetFiles(packageDirectory, "DotnetToolSettings.xml", SearchOption.AllDirectories);
         return ToolSettingsLocator.Choose(files, hostRid, muxerPath);
+    }
+
+    static string FormatVersionNotFound(string packageId, PackageVersion version, IReadOnlyList<string> sources)
+    {
+        var feeds = sources.Count == 0 ? "(none)" : string.Join(", ", sources);
+        return $"Version {version} of package {packageId} is not found in NuGet feeds {feeds}.";
     }
 
     static ToolSettings ReadSettings(string path)

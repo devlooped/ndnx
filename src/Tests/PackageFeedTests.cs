@@ -106,8 +106,65 @@ public class PackageFeedTests
 
         var error = await Assert.ThrowsAsync<InvalidOperationException>(
             () => store.GetAsync(invocation, [Source]));
-        Assert.Contains("was not found", error.Message);
+        Assert.Equal(
+            $"Version {VersionText} of package {PackageId} is not found in NuGet feeds {Source}.",
+            error.Message);
         Assert.Contains(VersionsUrl(PackageId), handler.Hits);
+    }
+
+    [Fact]
+    public async Task Exact_nupkg_404_and_missing_index_is_not_found()
+    {
+        using var packages = new TempNupkgs();
+        var handler = MapFeed(packages);
+        handler.Map.Remove(VersionsUrl(PackageId));
+        handler.Status[NupkgUrl(PackageId)] = HttpStatusCode.NotFound;
+
+        using var http = new HttpClient(handler);
+        var store = new ToolPackageStore(new PackageFeed(http, ignoreFailedSources: false), NewStore());
+        var invocation = ArgParser.Parse(PackageId + "@" + VersionText, "--yes", "--source", Source);
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => store.GetAsync(invocation, [Source]));
+        Assert.Equal(
+            $"Version {VersionText} of package {PackageId} is not found in NuGet feeds {Source}.",
+            error.Message);
+        Assert.Contains(VersionsUrl(PackageId), handler.Hits);
+        Assert.DoesNotContain("404", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Missing_rid_package_reports_dnx_style_not_found()
+    {
+        using var packages = new TempNupkgs();
+        var handler = MapFeed(packages);
+        handler.Map[NupkgUrl(RidWrapperId)] = File.ReadAllBytes(packages.RidWrapper);
+
+        using var http = new HttpClient(handler);
+        var store = new ToolPackageStore(new PackageFeed(http, ignoreFailedSources: false), NewStore());
+        var invocation = ArgParser.Parse(RidWrapperId + "@" + VersionText, "--yes", "--source", Source);
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => store.GetAsync(invocation, [Source]));
+        Assert.Equal(
+            $"Version {VersionText} of package {RidImplId} is not found in NuGet feeds {Source}.",
+            error.Message);
+        Assert.Contains(NupkgUrl(RidImplId), handler.Hits);
+        Assert.Contains(VersionsUrl(RidImplId), handler.Hits);
+    }
+
+    [Fact]
+    public async Task List_treats_missing_package_index_as_empty()
+    {
+        using var packages = new TempNupkgs();
+        var handler = MapFeed(packages);
+        using var http = new HttpClient(handler);
+        var feed = new PackageFeed(http, ignoreFailedSources: false);
+
+        var listed = await feed.ListAsync([Source], "no-such-package", VersionRange.Any(includePrerelease: false));
+
+        Assert.Empty(listed);
+        Assert.Contains(VersionsUrl("no-such-package"), handler.Hits);
     }
 
     static async Task<ToolCommand> GetExactAsync(RecordingHandler handler, string packageId)
