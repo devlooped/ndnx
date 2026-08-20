@@ -5,8 +5,8 @@ using System.Security.Cryptography;
 namespace ndnx;
 
 /// <summary>
-/// Turns a Native AOT publish directory into the archive + SHA256 that
-/// winget, Scoop, and Homebrew download from a GitHub Release.
+/// Turns a Native AOT publish directory into the archive + SHA256
+/// attached to a GitHub Release (and consumed by the install scripts).
 /// </summary>
 public static class NativePacker
 {
