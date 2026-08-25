@@ -19,7 +19,7 @@ public class PublishWorkflowTests
 
         Assert.Contains("workflow_run", yml);
         Assert.Contains("workflows: [build]", yml);
-        Assert.Contains("head_branch == 'main'", yml);
+        Assert.Contains("branches: [main]", yml);
         Assert.Contains("--prerelease", yml);
         Assert.Contains("--latest=false", yml);
         Assert.Contains("release create ci", yml);
