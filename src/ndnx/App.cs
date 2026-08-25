@@ -18,8 +18,12 @@ public sealed class NdnxHost
     public string? DotnetMuxer { get; init; }
     public TimeSpan? UpdateInterval { get; init; }
     public TimeSpan StopTimeout { get; init; } = TimeSpan.FromSeconds(5);
+    public bool ShowProgress { get; init; }
 
-    public static NdnxHost CreateDefault() => new();
+    public static NdnxHost CreateDefault() => new()
+    {
+        ShowProgress = !Console.IsOutputRedirected && !Console.IsErrorRedirected,
+    };
 
     public static string DefaultStoreDirectory(string? workingDirectory = null)
         => Environment.GetEnvironmentVariable("NDNX_STORE")
@@ -89,7 +93,8 @@ public static class App
 
             var log = IsDetailed(invocation.Verbosity) ? host.Out : null;
             var sources = PackageSources.Resolve(invocation, host.WorkingDirectory);
-            var feed = new PackageFeed(http, invocation.IgnoreFailedSources, log);
+            var progress = host.ShowProgress ? host.Error : null;
+            var feed = new PackageFeed(http, invocation.IgnoreFailedSources, log, progress);
             var muxer = host.DotnetMuxer ?? DotnetMuxer.Resolve();
             var store = new ToolPackageStore(feed, host.StoreDirectory, log, muxer, host.RuntimeIdentifier);
             var command = await store.GetAsync(invocation, sources, cancellationToken).ConfigureAwait(false);

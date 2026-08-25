@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.IO.Compression;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Xml.Linq;
 
 namespace ndnx;
@@ -16,13 +17,15 @@ public sealed class PackageFeed
     readonly HttpClient http;
     readonly bool ignoreFailedSources;
     readonly TextWriter? log;
-    readonly ConcurrentDictionary<string, Task<string>> packageBaseAddresses = new(StringComparer.OrdinalIgnoreCase);
+    readonly DownloadProgressWriter? progress;
+    readonly ConcurrentDictionary<string, Task<ServiceIndex>> serviceIndexes = new(StringComparer.OrdinalIgnoreCase);
 
-    public PackageFeed(HttpClient http, bool ignoreFailedSources, TextWriter? log = null)
+    public PackageFeed(HttpClient http, bool ignoreFailedSources, TextWriter? log = null, TextWriter? progress = null)
     {
         this.http = http;
         this.ignoreFailedSources = ignoreFailedSources;
         this.log = log;
+        this.progress = progress is null ? null : new DownloadProgressWriter(progress);
     }
 
     public async Task<IReadOnlyList<PackageIdentity>> ListAsync(
@@ -88,15 +91,47 @@ public sealed class PackageFeed
         }
 
         var url = await GetPackageUrlAsync(package, cancellationToken).ConfigureAwait(false);
+        var catalogSize = progress is not null
+            ? await TryGetCatalogPackageSizeAsync(package, cancellationToken).ConfigureAwait(false)
+            : null;
         using var response = await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
         if (response.StatusCode == HttpStatusCode.NotFound)
             return false;
 
         response.EnsureSuccessStatusCode();
+        var total = catalogSize ?? response.Content.Headers.ContentLength;
         await using var input = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         await using var output = File.Create(destinationNupkg);
-        await input.CopyToAsync(output, cancellationToken).ConfigureAwait(false);
+        await CopyAsync(input, output, total, cancellationToken).ConfigureAwait(false);
         return true;
+    }
+
+    async Task CopyAsync(Stream input, Stream output, long? total, CancellationToken cancellationToken)
+    {
+        if (progress is null)
+        {
+            await input.CopyToAsync(output, cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        try
+        {
+            var buffer = new byte[81920];
+            long transferred = 0;
+            while (true)
+            {
+                var read = await input.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken).ConfigureAwait(false);
+                if (read == 0)
+                    break;
+                await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+                transferred += read;
+                progress.Report(transferred, total);
+            }
+        }
+        finally
+        {
+            progress.Complete();
+        }
     }
 
     IEnumerable<PackageIdentity> ListLocal(string directory, string packageId, VersionRange range)
@@ -181,28 +216,118 @@ public sealed class PackageFeed
         if (!source.Contains("index.json", StringComparison.OrdinalIgnoreCase))
             return EnsureTrailingSlash(source);
 
-        var cached = packageBaseAddresses.GetOrAdd(source, s => FetchPackageBaseAddressAsync(s, cancellationToken));
-        try
-        {
-            return await cached.ConfigureAwait(false);
-        }
-        catch
-        {
-            packageBaseAddresses.TryRemove(KeyValuePair.Create(source, cached));
-            throw;
-        }
-    }
-
-    async Task<string> FetchPackageBaseAddressAsync(string source, CancellationToken cancellationToken)
-    {
-        var index = await http.GetFromJsonAsync(source, NuGetJsonContext.Default.ServiceIndex, cancellationToken).ConfigureAwait(false);
-        var resource = index?.Resources?.FirstOrDefault(r =>
+        var index = await GetServiceIndexAsync(source, cancellationToken).ConfigureAwait(false);
+        var resource = index.Resources?.FirstOrDefault(r =>
             r.Type is not null && r.Type.StartsWith("PackageBaseAddress", StringComparison.OrdinalIgnoreCase));
 
         if (resource?.Id is null)
             throw new InvalidOperationException($"Package source '{source}' does not advertise a PackageBaseAddress.");
 
         return EnsureTrailingSlash(resource.Id);
+    }
+
+    async Task<long?> TryGetCatalogPackageSizeAsync(PackageIdentity package, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (!package.Source.Contains("index.json", StringComparison.OrdinalIgnoreCase))
+                return null;
+
+            var index = await GetServiceIndexAsync(package.Source, cancellationToken).ConfigureAwait(false);
+            var registrations = PickRegistrationsBase(index);
+            if (registrations is null)
+                return null;
+
+            var id = package.Id.ToLowerInvariant();
+            var version = package.Version.ToString().ToLowerInvariant();
+            var leafUrl = $"{registrations}{id}/{version}.json";
+            using var leafResponse = await http.GetAsync(leafUrl, cancellationToken).ConfigureAwait(false);
+            if (!leafResponse.IsSuccessStatusCode)
+                return null;
+
+            var leaf = await leafResponse.Content.ReadFromJsonAsync(
+                    NuGetJsonContext.Default.RegistrationLeaf, cancellationToken)
+                .ConfigureAwait(false);
+            if (leaf is null)
+                return null;
+
+            return await ReadPackageSizeAsync(leaf.CatalogEntry, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            log?.WriteLine($"Failed to query package size for {package.Id} {package.Version}: {ex.Message}");
+            return null;
+        }
+    }
+
+    async Task<long?> ReadPackageSizeAsync(JsonElement catalogEntry, CancellationToken cancellationToken)
+    {
+        switch (catalogEntry.ValueKind)
+        {
+            case JsonValueKind.String:
+                return await ReadCatalogLeafSizeAsync(catalogEntry.GetString(), cancellationToken).ConfigureAwait(false);
+            case JsonValueKind.Object:
+                if (catalogEntry.TryGetProperty("packageSize", out var inline) &&
+                    inline.TryGetInt64(out var size) && size > 0)
+                    return size;
+                if (catalogEntry.TryGetProperty("@id", out var id) && id.GetString() is { Length: > 0 } url)
+                    return await ReadCatalogLeafSizeAsync(url, cancellationToken).ConfigureAwait(false);
+                return null;
+            default:
+                return null;
+        }
+    }
+
+    async Task<long?> ReadCatalogLeafSizeAsync(string? url, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(url))
+            return null;
+
+        using var response = await http.GetAsync(url, cancellationToken).ConfigureAwait(false);
+        if (!response.IsSuccessStatusCode)
+            return null;
+
+        var leaf = await response.Content.ReadFromJsonAsync(
+                NuGetJsonContext.Default.CatalogLeaf, cancellationToken)
+            .ConfigureAwait(false);
+        return leaf?.PackageSize is > 0 ? leaf.PackageSize : null;
+    }
+
+    async Task<ServiceIndex> GetServiceIndexAsync(string source, CancellationToken cancellationToken)
+    {
+        var cached = serviceIndexes.GetOrAdd(source, s => FetchServiceIndexAsync(s, cancellationToken));
+        try
+        {
+            return await cached.ConfigureAwait(false);
+        }
+        catch
+        {
+            serviceIndexes.TryRemove(KeyValuePair.Create(source, cached));
+            throw;
+        }
+    }
+
+    async Task<ServiceIndex> FetchServiceIndexAsync(string source, CancellationToken cancellationToken)
+    {
+        var index = await http.GetFromJsonAsync(source, NuGetJsonContext.Default.ServiceIndex, cancellationToken).ConfigureAwait(false);
+        return index ?? throw new InvalidOperationException($"Package source '{source}' returned an empty service index.");
+    }
+
+    static string? PickRegistrationsBase(ServiceIndex index)
+    {
+        var matches = index.Resources?
+            .Where(r => r.Id is not null && r.Type is not null &&
+                r.Type.StartsWith("RegistrationsBaseUrl", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (matches is not { Count: > 0 })
+            return null;
+
+        var preferred = matches.FirstOrDefault(r =>
+                r.Type!.Equals("RegistrationsBaseUrl/3.6.0", StringComparison.OrdinalIgnoreCase))
+            ?? matches.FirstOrDefault(r =>
+                r.Type!.Equals("RegistrationsBaseUrl/3.4.0", StringComparison.OrdinalIgnoreCase))
+            ?? matches[0];
+        return EnsureTrailingSlash(preferred.Id!);
     }
 
     static string EnsureTrailingSlash(string value) => value.EndsWith('/') ? value : value + "/";
