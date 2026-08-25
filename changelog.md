@@ -1,5 +1,13 @@
 # Changelog
 
+## [v0.6.4](https://github.com/devlooped/ndnx/tree/v0.6.4) (2026-08-25)
+
+[Full Changelog](https://github.com/devlooped/ndnx/compare/v0.6.3...v0.6.4)
+
+:bug: Fixed bugs:
+
+- fix: show download progress on Windows PowerShell [\#13](https://github.com/devlooped/ndnx/pull/13) (@kzu)
+
 ## [v0.6.3](https://github.com/devlooped/ndnx/tree/v0.6.3) (2026-08-25)
 
 [Full Changelog](https://github.com/devlooped/ndnx/compare/v0.6.2...v0.6.3)
