@@ -40,6 +40,28 @@ public class DownloadProgressTests
         Assert.Contains("downloading", second, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(1023, "1023 B")]
+    [InlineData(1024, "1.0 KB")]
+    [InlineData(80L * 1024 * 1024, "80.0 MB")]
+    [InlineData(227_645_850, "217.1 MB")]
+    [InlineData(1024L * 1024 * 1024, "1.0 GB")]
+    public void Known_total_picks_the_matching_byte_unit(long bytes, string expected)
+    {
+        var frame = DownloadProgress.Render(bytes, bytes, 0);
+
+        AssertBar(frame, expected, expected);
+    }
+
+    [Fact]
+    public void Megabyte_download_does_not_render_as_gigabytes()
+    {
+        var frame = DownloadProgress.Render(80L * 1024 * 1024, 227_645_850, 0);
+
+        AssertBar(frame, "80.0 MB", "217.1 MB");
+        Assert.DoesNotContain("GB", frame, StringComparison.Ordinal);
+    }
+
     static void AssertBar(string frame, string transferred, string total)
     {
         Assert.Matches(@"^\[#*\-*\] .+$", frame);
