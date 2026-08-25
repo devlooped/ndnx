@@ -16,6 +16,10 @@ env:
 
 jobs:
   native-aot:
+    # Rolling `ci` prereleases are produced by ci-release.yml. This
+    # workflow is for versioned GitHub Releases only; `refs/tags/ci`
+    # is not a valid Version and restore fails with MSB4181.
+    if: github.event.release.tag_name != 'ci'
     name: native-aot-${{ matrix.rid }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -76,6 +80,7 @@ jobs:
 
   publish:
     needs: native-aot
+    if: github.event.release.tag_name != 'ci'
     runs-on: ${{ vars.PUBLISH_AGENT || 'ubuntu-latest' }}
     permissions:
       contents: write
