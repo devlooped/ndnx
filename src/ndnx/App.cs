@@ -37,7 +37,7 @@ public static class App
 {
     const string Usage = """
         Usage: ndnx <PACKAGE_NAME[@VERSION]> [options] [--] [tool arguments]
-               ndnx --update [VERSION]
+               ndnx --update [VERSION|ci]
                ndnx --version
 
         A floating version (unspecified, @*, @*-*, or a range) stays current:
@@ -56,7 +56,7 @@ public static class App
           --ignore-failed-sources    Treat source failures as warnings
           --no-http-cache            Do not use an HTTP cache
           --interactive              Allow interactive restore prompts
-          --update [VERSION]         Self-update ndnx to the latest or given version
+          --update [VERSION]         Self-update to latest, a version, or ci (rolling prerelease)
           --version                  Print the ndnx version
         """;
 

@@ -107,8 +107,16 @@ New-Item -ItemType Directory -Path $tmp | Out-Null
 try {
     if (-not $Archive) {
         if ($Version) {
-            $tag = if ($Version.StartsWith('v')) { $Version } else { "v$Version" }
-            $resolved = $tag.TrimStart('v')
+            if ($Version -eq 'ci') {
+                $tag = 'ci'
+                $resolved = 'ci'
+            } elseif ($Version.StartsWith('v')) {
+                $tag = $Version
+                $resolved = $tag.TrimStart('v')
+            } else {
+                $tag = "v$Version"
+                $resolved = $Version
+            }
         } else {
             $release = Invoke-RestMethod -Headers @{ Accept = 'application/vnd.github+json' } `
                 -Uri "https://api.github.com/repos/$Repo/releases/latest"

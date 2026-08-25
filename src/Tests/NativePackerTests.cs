@@ -19,6 +19,7 @@ public class NativePackerTests
         var result = NativePacker.Pack(dir.Publish, rid, dir.Output, "1.2.3");
 
         Assert.Equal($"ndnx-1.2.3-{rid}.zip", Path.GetFileName(result.ArchivePath));
+        Assert.Equal($"ndnx-ci-{rid}.zip", NativePacker.ArchiveFileName(rid, "ci"));
         Assert.True(File.Exists(result.ArchivePath));
         Assert.True(File.Exists(result.Sha256Path));
 

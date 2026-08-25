@@ -66,6 +66,45 @@ public class SelfUpdateTests
     }
 
     [Fact]
+    public async Task Update_to_ci_downloads_the_rolling_prerelease_tag()
+    {
+        using var dir = new TempDir();
+        var current = Path.Combine(dir.Prefix, "ndnx.exe");
+        File.WriteAllBytes(current, "old-binary"u8.ToArray());
+
+        using var handler = new MapHandler();
+        AddRelease(handler, dir, SelfUpdate.CiChannel, "ci-binary"u8.ToArray(), tag: SelfUpdate.CiChannel);
+        var host = NewHost(dir, current, "0.1.0", handler);
+
+        var code = await App.RunAsync(["--update", "ci"], host);
+
+        Assert.Equal(0, code);
+        Assert.Equal("ci-binary"u8.ToArray(), File.ReadAllBytes(current));
+        Assert.Contains("Updating to ci", host.Out.ToString());
+        Assert.Contains(SelfUpdate.AssetUrl(Repo, SelfUpdate.CiChannel, SelfUpdate.ArchiveFileName(Rid, SelfUpdate.CiChannel)), handler.Hits);
+        Assert.DoesNotContain(handler.Hits, u => u.Contains("/releases/latest", StringComparison.Ordinal));
+        Assert.DoesNotContain(handler.Hits, u => u.Contains("/vci/", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Update_to_ci_redownloads_even_when_already_labeled_ci()
+    {
+        using var dir = new TempDir();
+        var current = Path.Combine(dir.Prefix, "ndnx.exe");
+        File.WriteAllBytes(current, "stale-ci"u8.ToArray());
+
+        using var handler = new MapHandler();
+        AddRelease(handler, dir, SelfUpdate.CiChannel, "fresh-ci"u8.ToArray(), tag: SelfUpdate.CiChannel);
+        var host = NewHost(dir, current, SelfUpdate.CiChannel, handler);
+
+        var code = await App.RunAsync(["--update", "ci"], host);
+
+        Assert.Equal(0, code);
+        Assert.Equal("fresh-ci"u8.ToArray(), File.ReadAllBytes(current));
+        Assert.Contains(handler.Hits, u => u.Contains("/releases/download/ci/", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task Update_to_an_older_version_is_allowed()
     {
         using var dir = new TempDir();
@@ -209,7 +248,7 @@ public class SelfUpdateTests
         return handler;
     }
 
-    static void AddRelease(MapHandler handler, TempDir dir, string version, byte[] payload)
+    static void AddRelease(MapHandler handler, TempDir dir, string version, byte[] payload, string? tag = null)
     {
         var publish = Path.Combine(dir.Root, "publish-" + version);
         Directory.CreateDirectory(publish);
@@ -218,8 +257,9 @@ public class SelfUpdateTests
         var archive = File.ReadAllBytes(packed.ArchivePath);
         var sha = File.ReadAllBytes(packed.Sha256Path);
         var name = Path.GetFileName(packed.ArchivePath);
-        handler.Map[SelfUpdate.AssetUrl(Repo, "v" + version, name)] = (HttpStatusCode.OK, archive, "application/octet-stream");
-        handler.Map[SelfUpdate.AssetUrl(Repo, "v" + version, name) + ".sha256"] = (HttpStatusCode.OK, sha, "text/plain");
+        var releaseTag = tag ?? SelfUpdate.ReleaseTag(version);
+        handler.Map[SelfUpdate.AssetUrl(Repo, releaseTag, name)] = (HttpStatusCode.OK, archive, "application/octet-stream");
+        handler.Map[SelfUpdate.AssetUrl(Repo, releaseTag, name) + ".sha256"] = (HttpStatusCode.OK, sha, "text/plain");
     }
 
     sealed class MapHandler : HttpMessageHandler

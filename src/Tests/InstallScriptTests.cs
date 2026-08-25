@@ -131,15 +131,32 @@ public class InstallScriptTests
     }
 
     [Fact]
+    public void Install_scripts_resolve_ci_channel_without_a_v_prefix()
+    {
+        var root = FindRepoRoot();
+        var sh = File.ReadAllText(Path.Combine(root, "install.sh"));
+        var ps = File.ReadAllText(Path.Combine(root, "install.ps1"));
+
+        Assert.Contains("ci)", sh);
+        Assert.Contains("tag=ci", sh);
+        Assert.Contains("version=ci", sh);
+        Assert.Contains("$Version -eq 'ci'", ps);
+        Assert.Contains("$tag = 'ci'", ps);
+        Assert.Contains("$resolved = 'ci'", ps);
+    }
+
+    [Fact]
     public void Workflow_does_not_publish_nuget_or_sleet()
     {
         var yml = File.ReadAllText(Path.Combine(FindRepoRoot(), ".github", "workflows", "publish.yml"));
         var build = File.ReadAllText(Path.Combine(FindRepoRoot(), ".github", "workflows", "build.yml"));
+        var ci = File.ReadAllText(Path.Combine(FindRepoRoot(), ".github", "workflows", "ci-release.yml"));
         Assert.DoesNotContain("dotnet nuget push", yml);
         Assert.DoesNotContain("sleet push", yml);
         Assert.DoesNotContain("NUGET_API_KEY", yml);
         Assert.DoesNotContain("SLEET_CONNECTION", yml);
         Assert.DoesNotContain("sleet push", build);
+        Assert.DoesNotContain("sleet push", ci);
         Assert.Contains("install.sh", yml);
         Assert.Contains("install.ps1", yml);
     }
