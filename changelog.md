@@ -1,5 +1,18 @@
 # Changelog
 
+## [v0.6.3](https://github.com/devlooped/ndnx/tree/v0.6.3) (2026-08-25)
+
+[Full Changelog](https://github.com/devlooped/ndnx/compare/v0.6.2...v0.6.3)
+
+:sparkles: Implemented enhancements:
+
+- feat: publish a rolling ci prerelease for dogfood [\#11](https://github.com/devlooped/ndnx/pull/11) (@kzu)
+- Show download progress for large native nupkgs [\#10](https://github.com/devlooped/ndnx/pull/10) (@kzu)
+
+:bug: Fixed bugs:
+
+- fix: only start ci-release after a successful build on main [\#12](https://github.com/devlooped/ndnx/pull/12) (@kzu)
+
 ## [v0.6.2](https://github.com/devlooped/ndnx/tree/v0.6.2) (2026-08-20)
 
 [Full Changelog](https://github.com/devlooped/ndnx/compare/v0.6.1...v0.6.2)
