@@ -249,6 +249,38 @@ public class PackageFeedTests
     }
 
     [Fact]
+    public async Task App_writes_download_progress_to_host_Progress()
+    {
+        using var packages = new TempNupkgs();
+        var body = File.ReadAllBytes(packages.Plain);
+        var handler = MapFeed(packages);
+        MapCatalog(handler, PackageId, body.Length);
+        using var error = new StringWriter();
+        using var progress = new StringWriter();
+        using var output = new StringWriter();
+        var host = new NdnxHost
+        {
+            HttpHandler = handler,
+            Error = error,
+            Out = output,
+            Progress = progress,
+            StoreDirectory = NewStore(),
+            ShowProgress = true,
+            ProcessRunner = new RecordingProcessRunner { ExitCode = 0 },
+            WorkingDirectory = packages.Root,
+        };
+
+        var code = await App.RunAsync([PackageId + "@" + VersionText, "--yes", "--source", Source], host);
+
+        Assert.Equal(0, code);
+        Assert.Equal("", error.ToString());
+        var ui = progress.ToString();
+        Assert.Contains("[", ui, StringComparison.Ordinal);
+        Assert.Contains(" / ", ui, StringComparison.Ordinal);
+        Assert.Contains(" B", ui, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Http_download_succeeds_when_catalog_size_lookup_fails()
     {
         using var packages = new TempNupkgs();

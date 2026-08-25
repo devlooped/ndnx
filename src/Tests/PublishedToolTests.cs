@@ -174,16 +174,6 @@ public class PublishedToolTests
         foreach (var arg in args)
             start.ArgumentList.Add(arg);
         start.Environment["NDNX_STORE"] = Store;
-
-        using var process = Process.Start(start) ?? throw new InvalidOperationException("Failed to start ndnx.");
-        var stdout = process.StandardOutput.ReadToEnd();
-        var stderr = process.StandardError.ReadToEnd();
-        if (!process.WaitForExit(60_000))
-        {
-            process.Kill(entireProcessTree: true);
-            throw new TimeoutException($"ndnx timed out.{Environment.NewLine}{stdout}{Environment.NewLine}{stderr}");
-        }
-
-        return (process.ExitCode, stdout, stderr);
+        return ProcessCapture.Run(start);
     }
 }

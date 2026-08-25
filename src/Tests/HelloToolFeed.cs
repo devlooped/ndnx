@@ -24,13 +24,21 @@ public sealed class HelloToolFeed : IDisposable
     public static string RidImplId => $"{RidWrapperId}.{HostRid}";
     public static string AnyImplId => $"{AnyWrapperId}.any";
 
-    public string Root { get; }
-    public string FeedDirectory { get; }
+    static readonly object Gate = new();
+
+    public string Root { get; private set; }
+    public string FeedDirectory { get; private set; }
 
     public HelloToolFeed()
     {
         Root = Path.Combine(Path.GetTempPath(), "ndnx-hello-tool-feed");
         FeedDirectory = Path.Combine(Root, "feed");
+        lock (Gate)
+            Build();
+    }
+
+    void Build()
+    {
         Directory.CreateDirectory(FeedDirectory);
 
         var stamp = Path.Combine(Root, "stamp.txt");
@@ -316,14 +324,11 @@ public sealed class HelloToolFeed : IDisposable
         foreach (var arg in args)
             start.ArgumentList.Add(arg);
 
-        using var process = Process.Start(start) ?? throw new InvalidOperationException("Failed to start dotnet.");
-        var stdout = process.StandardOutput.ReadToEnd();
-        var stderr = process.StandardError.ReadToEnd();
-        process.WaitForExit();
-        if (process.ExitCode != 0)
+        var (exit, stdout, stderr) = ProcessCapture.Run(start, timeoutMs: 180_000);
+        if (exit != 0)
         {
             throw new InvalidOperationException(
-                $"dotnet {string.Join(' ', args)} failed ({process.ExitCode}).{Environment.NewLine}{stdout}{Environment.NewLine}{stderr}");
+                $"dotnet {string.Join(' ', args)} failed ({exit}).{Environment.NewLine}{stdout}{Environment.NewLine}{stderr}");
         }
     }
 }

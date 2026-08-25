@@ -391,11 +391,6 @@ public class ToolInvokeTests : IClassFixture<HelloToolFeed>
         foreach (var arg in args)
             start.ArgumentList.Add(arg);
         start.Environment["NDNX_STORE"] = store;
-
-        using var process = Process.Start(start) ?? throw new InvalidOperationException("Failed to start ndnx.");
-        var stdout = process.StandardOutput.ReadToEnd();
-        var stderr = process.StandardError.ReadToEnd();
-        process.WaitForExit();
-        return (process.ExitCode, stdout, stderr);
+        return ProcessCapture.Run(start);
     }
 }
