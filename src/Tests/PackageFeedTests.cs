@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Net;
 using System.Runtime.InteropServices;
+using System.Text;
 using ndnx;
 
 namespace Tests;
@@ -167,6 +168,108 @@ public class PackageFeedTests
         Assert.Contains(VersionsUrl("no-such-package"), handler.Hits);
     }
 
+    [Fact]
+    public async Task Http_download_with_known_size_renders_byte_progress_bar()
+    {
+        using var packages = new TempNupkgs();
+        var body = SizedBody(200);
+        var handler = MapFeed(packages);
+        handler.Map[NupkgUrl(PackageId)] = body;
+        handler.OmitContentLength.Add(NupkgUrl(PackageId));
+        MapCatalog(handler, PackageId, body.Length);
+        using var http = new HttpClient(handler);
+        using var progress = new StringWriter();
+        var feed = new PackageFeed(http, ignoreFailedSources: false, progress: progress);
+        var dest = Path.Combine(packages.Root, "known.nupkg");
+
+        Assert.True(await feed.TryDownloadAsync(new PackageIdentity(PackageId, Version, Source), dest));
+
+        var ui = progress.ToString();
+        SaveEvidence("progress-known.log", ui);
+        Assert.Contains("[", ui, StringComparison.Ordinal);
+        Assert.Contains("]", ui, StringComparison.Ordinal);
+        Assert.Contains("200 B", ui, StringComparison.Ordinal);
+        Assert.Contains(" / ", ui, StringComparison.Ordinal);
+        Assert.DoesNotContain("downloading", ui, StringComparison.Ordinal);
+        Assert.Equal(body, File.ReadAllBytes(dest));
+        Assert.Contains(RegistrationUrl(PackageId), handler.Hits);
+        Assert.Contains(CatalogUrl(PackageId), handler.Hits);
+    }
+
+    [Fact]
+    public async Task Http_download_with_unknown_size_renders_spinner_and_downloading()
+    {
+        using var packages = new TempNupkgs();
+        var body = SizedBody(200);
+        var handler = MapFeed(packages);
+        handler.Map[NupkgUrl(PackageId)] = body;
+        handler.OmitContentLength.Add(NupkgUrl(PackageId));
+        using var http = new HttpClient(handler);
+        using var progress = new StringWriter();
+        var feed = new PackageFeed(http, ignoreFailedSources: false, progress: progress);
+        var dest = Path.Combine(packages.Root, "unknown.nupkg");
+
+        Assert.True(await feed.TryDownloadAsync(new PackageIdentity(PackageId, Version, Source), dest));
+
+        var ui = progress.ToString();
+        SaveEvidence("progress-unknown.log", ui);
+        Assert.Contains("downloading", ui, StringComparison.Ordinal);
+        Assert.Matches(@"[|/\-\\] downloading", ui);
+        Assert.Equal(body, File.ReadAllBytes(dest));
+    }
+
+    [Fact]
+    public async Task Http_download_with_progress_disabled_writes_no_progress_ui()
+    {
+        using var packages = new TempNupkgs();
+        var body = File.ReadAllBytes(packages.Plain);
+        var handler = MapFeed(packages);
+        MapCatalog(handler, PackageId, body.Length);
+        using var error = new StringWriter();
+        using var output = new StringWriter();
+        var host = new NdnxHost
+        {
+            HttpHandler = handler,
+            Error = error,
+            Out = output,
+            StoreDirectory = NewStore(),
+            ShowProgress = false,
+            ProcessRunner = new RecordingProcessRunner { ExitCode = 0 },
+            WorkingDirectory = packages.Root,
+        };
+
+        var code = await App.RunAsync([PackageId + "@" + VersionText, "--yes", "--source", Source], host);
+
+        var ui = error.ToString();
+        SaveEvidence("progress-redirected.log", ui);
+        Assert.Equal(0, code);
+        Assert.Equal("", ui);
+        Assert.DoesNotContain(handler.Hits, url => url.Contains("/reg/", StringComparison.Ordinal));
+        Assert.DoesNotContain(handler.Hits, url => url.Contains("/catalog/", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Http_download_succeeds_when_catalog_size_lookup_fails()
+    {
+        using var packages = new TempNupkgs();
+        var body = SizedBody(200);
+        var handler = MapFeed(packages);
+        handler.Map[NupkgUrl(PackageId)] = body;
+        MapCatalog(handler, PackageId, body.Length);
+        handler.Status[CatalogUrl(PackageId)] = HttpStatusCode.NotFound;
+        using var http = new HttpClient(handler);
+        using var progress = new StringWriter();
+        var feed = new PackageFeed(http, ignoreFailedSources: false, progress: progress);
+        var dest = Path.Combine(packages.Root, "catalog-404.nupkg");
+
+        Assert.True(await feed.TryDownloadAsync(new PackageIdentity(PackageId, Version, Source), dest));
+
+        Assert.Equal(body, File.ReadAllBytes(dest));
+        var ui = progress.ToString();
+        Assert.Contains("[", ui, StringComparison.Ordinal);
+        Assert.Contains("200 B", ui, StringComparison.Ordinal);
+    }
+
     static async Task<ToolCommand> GetExactAsync(RecordingHandler handler, string packageId)
     {
         using var http = new HttpClient(handler);
@@ -186,6 +289,37 @@ public class PackageFeedTests
         return handler;
     }
 
+    static void MapCatalog(RecordingHandler handler, string packageId, long packageSize)
+    {
+        handler.Map[Source] = """
+            {"resources":[
+              {"@id":"https://feed.test/flat/","@type":"PackageBaseAddress/3.0.0"},
+              {"@id":"https://feed.test/reg/","@type":"RegistrationsBaseUrl/3.6.0"}
+            ]}
+            """u8.ToArray();
+        handler.Map[RegistrationUrl(packageId)] = Encoding.UTF8.GetBytes(
+            $$"""{"catalogEntry":"{{CatalogUrl(packageId)}}"}""");
+        handler.Map[CatalogUrl(packageId)] = Encoding.UTF8.GetBytes(
+            $$"""{"packageSize":{{packageSize}}}""");
+    }
+
+    static byte[] SizedBody(int length)
+    {
+        var body = new byte[length];
+        for (var i = 0; i < body.Length; i++)
+            body[i] = (byte)i;
+        return body;
+    }
+
+    static void SaveEvidence(string fileName, string content)
+    {
+        var dir = Environment.GetEnvironmentVariable("NDNX_PROGRESS_EVIDENCE");
+        if (string.IsNullOrWhiteSpace(dir))
+            return;
+        Directory.CreateDirectory(dir);
+        File.WriteAllText(Path.Combine(dir, fileName), content);
+    }
+
     static byte[] VersionsJson() => """{"versions":["1.0.0"]}"""u8.ToArray();
 
     static string NupkgUrl(string packageId)
@@ -196,6 +330,12 @@ public class PackageFeedTests
 
     static string VersionsUrl(string packageId)
         => $"{Flat}{packageId.ToLowerInvariant()}/index.json";
+
+    static string RegistrationUrl(string packageId)
+        => $"https://feed.test/reg/{packageId.ToLowerInvariant()}/{VersionText}.json";
+
+    static string CatalogUrl(string packageId)
+        => $"https://feed.test/catalog/{packageId.ToLowerInvariant()}.{VersionText}.json";
 
     static PackageVersion ParseVersion()
         => PackageVersion.TryParse(VersionText, out var parsed)
@@ -284,6 +424,7 @@ public class PackageFeedTests
         public Dictionary<string, byte[]> Map { get; } = new(StringComparer.Ordinal);
         public Dictionary<string, HttpStatusCode> Status { get; } = new(StringComparer.Ordinal);
         public Dictionary<string, Func<(HttpStatusCode Status, byte[] Body)>> Override { get; } = new(StringComparer.Ordinal);
+        public HashSet<string> OmitContentLength { get; } = new(StringComparer.Ordinal);
         public List<string> Hits { get; } = [];
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -294,26 +435,45 @@ public class PackageFeedTests
             if (Override.TryGetValue(url, out var factory))
             {
                 var produced = factory();
-                return Task.FromResult(Response(request, produced.Status, produced.Body));
+                return Task.FromResult(Response(request, produced.Status, produced.Body, OmitContentLength.Contains(url)));
             }
 
             if (!Map.TryGetValue(url, out var body))
-                return Task.FromResult(Response(request, HttpStatusCode.NotFound, "not found"u8.ToArray()));
+                return Task.FromResult(Response(request, HttpStatusCode.NotFound, "not found"u8.ToArray(), omitLength: false));
 
             var status = Status.TryGetValue(url, out var mapped) ? mapped : HttpStatusCode.OK;
-            return Task.FromResult(Response(request, status, body));
+            return Task.FromResult(Response(request, status, body, OmitContentLength.Contains(url)));
         }
 
-        static HttpResponseMessage Response(HttpRequestMessage request, HttpStatusCode status, byte[] body)
+        static HttpResponseMessage Response(HttpRequestMessage request, HttpStatusCode status, byte[] body, bool omitLength)
         {
             var response = new HttpResponseMessage(status)
             {
-                Content = new ByteArrayContent(body),
+                Content = omitLength ? new UnsizedContent(body) : new ByteArrayContent(body),
                 RequestMessage = request,
             };
             var nupkg = request.RequestUri?.AbsolutePath.EndsWith(".nupkg", StringComparison.OrdinalIgnoreCase) == true;
             response.Content.Headers.ContentType = new(nupkg ? "application/octet-stream" : "application/json");
             return response;
+        }
+    }
+
+    sealed class UnsizedContent : HttpContent
+    {
+        readonly byte[] body;
+
+        public UnsizedContent(byte[] body) => this.body = body;
+
+        protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context)
+            => SerializeToStreamAsync(stream, context, CancellationToken.None);
+
+        protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context, CancellationToken cancellationToken)
+            => stream.WriteAsync(body.AsMemory(), cancellationToken).AsTask();
+
+        protected override bool TryComputeLength(out long length)
+        {
+            length = 0;
+            return false;
         }
     }
 }

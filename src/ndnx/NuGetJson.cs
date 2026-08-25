@@ -22,6 +22,17 @@ sealed class FlatContainerIndex
     public string[]? Versions { get; set; }
 }
 
+sealed class RegistrationLeaf
+{
+    [JsonPropertyName("catalogEntry")]
+    public System.Text.Json.JsonElement CatalogEntry { get; set; }
+}
+
+sealed class CatalogLeaf
+{
+    public long? PackageSize { get; set; }
+}
+
 sealed class RuntimeGraphFile
 {
     public Dictionary<string, RuntimeGraphNode>? Runtimes { get; set; }
@@ -64,6 +75,8 @@ sealed class RuntimeConfigFramework
     DefaultIgnoreCondition = WhenWritingNull)]
 [JsonSerializable(typeof(ServiceIndex))]
 [JsonSerializable(typeof(FlatContainerIndex))]
+[JsonSerializable(typeof(RegistrationLeaf))]
+[JsonSerializable(typeof(CatalogLeaf))]
 [JsonSerializable(typeof(RuntimeGraphFile))]
 [JsonSerializable(typeof(GitHubRelease))]
 [JsonSerializable(typeof(RuntimeConfigFile))]
