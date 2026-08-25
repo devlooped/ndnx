@@ -13,7 +13,9 @@ on:
 
 concurrency:
   group: ci-release
-  cancel-in-progress: true
+  # Do not cancel an in-flight publish: deleting the rolling `ci` release and
+  # then being cancelled leaves an untagged draft that blocks the next create.
+  cancel-in-progress: false
 
 env:
   DOTNET_NOLOGO: true
@@ -98,22 +100,50 @@ jobs:
       - name: 🚀 ci prerelease
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
+        shell: bash
         run: |
           set -euo pipefail
           mapfile -t assets < <(find native -type f \( -name '*.zip' -o -name '*.tar.gz' -o -name '*.sha256' \))
           assets+=(install.sh install.ps1)
-          if [ ${#assets[@]} -eq 0 ]; then
+          if [ "${#assets[@]}" -lt 3 ]; then
             echo "No native archives, checksums, or install scripts found to attach." >&2
+            printf '%s\n' "${assets[@]}" >&2
             exit 1
           fi
-          if gh release view ci >/dev/null 2>&1; then
-            gh release delete ci --yes --cleanup-tag
-          fi
-          gh release create ci --prerelease --latest=false --title "CI" \
-            --target "${NDNX_SHA}" \
-            --notes "Rolling native build from \`${NDNX_SHA}\`. Not a release.
+
+          # Looking up the rolling tag via /releases/tags misses untagged drafts.
+          # Those still have tag_name=ci, so create 422s with "already exists".
+          # Sweep every matching release by id, including drafts.
+          delete_ci_release() {
+            local ids id
+            ids="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/releases" --jq '.[] | select(.tag_name == "ci") | .id')"
+            while IFS= read -r id; do
+              [ -z "${id}" ] && continue
+              echo "Deleting existing ci release id=${id}"
+              gh api --method DELETE "repos/${GITHUB_REPOSITORY}/releases/${id}" || true
+            done <<< "${ids}"
+            gh api --method DELETE "repos/${GITHUB_REPOSITORY}/git/refs/tags/ci" || true
+          }
+
+          delete_ci_release
+
+          notes="Rolling native build from \`${NDNX_SHA}\`. Not a release.
 
           Install: \`curl -fsSL https://github.com/${GITHUB_REPOSITORY}/releases/download/ci/install.sh | NDNX_VERSION=ci sh\`
 
-          Update: \`ndnx --update ci\`" \
-            "${assets[@]}"
+          Update: \`ndnx --update ci\`"
+
+          attempt=0
+          until gh release create ci --prerelease --latest=false --title "CI" \
+            --target "${NDNX_SHA}" \
+            --notes "${notes}" \
+            "${assets[@]}"; do
+            attempt=$((attempt + 1))
+            if [ "${attempt}" -ge 8 ]; then
+              echo "gh release create ci failed after ${attempt} attempts" >&2
+              exit 1
+            fi
+            echo "ci tag still present (attempt ${attempt}); retrying..."
+            sleep $((attempt * 3))
+            delete_ci_release
+          done

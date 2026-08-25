@@ -23,9 +23,12 @@ public class PublishWorkflowTests
         Assert.Contains("--prerelease", yml);
         Assert.Contains("--latest=false", yml);
         Assert.Contains("release create ci", yml);
-        Assert.Contains("release delete ci", yml);
-        Assert.Contains("--cleanup-tag", yml);
+        Assert.Contains("select(.tag_name == \"ci\")", yml);
+        Assert.Contains("git/refs/tags/ci", yml);
         Assert.Contains("--target \"${NDNX_SHA}\"", yml);
+        Assert.Contains("until gh release create ci", yml);
+        Assert.Contains("cancel-in-progress: false", yml);
+        Assert.DoesNotContain("gh release view ci >/dev/null", yml);
         Assert.Contains("name: native-aot-${{ matrix.rid }}", yml);
         Assert.Contains("dotnet publish", yml);
         Assert.Contains("PublishAot", yml);
