@@ -110,6 +110,7 @@ jobs:
             gh release delete ci --yes --cleanup-tag
           fi
           gh release create ci --prerelease --latest=false --title "CI" \
+            --target "${NDNX_SHA}" \
             --notes "Rolling native build from \`${NDNX_SHA}\`. Not a release.
 
           Install: \`curl -fsSL https://github.com/${GITHUB_REPOSITORY}/releases/download/ci/install.sh | NDNX_VERSION=ci sh\`

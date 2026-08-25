@@ -25,6 +25,7 @@ public class PublishWorkflowTests
         Assert.Contains("release create ci", yml);
         Assert.Contains("release delete ci", yml);
         Assert.Contains("--cleanup-tag", yml);
+        Assert.Contains("--target \"${NDNX_SHA}\"", yml);
         Assert.Contains("name: native-aot-${{ matrix.rid }}", yml);
         Assert.Contains("dotnet publish", yml);
         Assert.Contains("PublishAot", yml);
@@ -50,6 +51,7 @@ public class PublishWorkflowTests
         Assert.Contains("release:", yml);
         Assert.Contains("prereleased", yml);
         Assert.Contains("released", yml);
+        Assert.Contains("github.event.release.tag_name != 'ci'", yml);
         Assert.Contains("name: native-aot-${{ matrix.rid }}", yml);
         Assert.Contains("dotnet publish", yml);
         Assert.Contains("PublishAot", yml);
