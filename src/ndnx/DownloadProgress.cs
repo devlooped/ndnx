@@ -43,10 +43,7 @@ public static class DownloadProgress
 
     static string FormatBytes(long bytes)
     {
-        if (bytes < 1024)
-            return bytes.ToString(CultureInfo.InvariantCulture) + " B";
-
-        ReadOnlySpan<string> units = ["KB", "MB", "GB", "TB"];
+        ReadOnlySpan<string> units = ["B", "KB", "MB", "GB", "TB"];
         var value = (double)bytes;
         var unit = 0;
         while (value >= 1024 && unit < units.Length - 1)
@@ -54,6 +51,9 @@ public static class DownloadProgress
             value /= 1024;
             unit++;
         }
+
+        if (unit == 0)
+            return bytes.ToString(CultureInfo.InvariantCulture) + " B";
 
         return string.Create(CultureInfo.InvariantCulture, $"{value:0.0} {units[unit]}");
     }
