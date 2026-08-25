@@ -100,50 +100,63 @@ jobs:
       - name: 🚀 ci prerelease
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
-        shell: bash
+        shell: pwsh
         run: |
-          set -euo pipefail
-          mapfile -t assets < <(find native -type f \( -name '*.zip' -o -name '*.tar.gz' -o -name '*.sha256' \))
-          assets+=(install.sh install.ps1)
-          if [ "${#assets[@]}" -lt 3 ]; then
-            echo "No native archives, checksums, or install scripts found to attach." >&2
-            printf '%s\n' "${assets[@]}" >&2
-            exit 1
-          fi
+          $assets = @(Get-ChildItem native -Recurse -File | Where-Object {
+            $_.Extension -in '.zip', '.sha256' -or $_.Name.EndsWith('.tar.gz')
+          })
+          $assets += Get-Item install.sh, install.ps1
+          if ($assets.Count -lt 3) {
+            Get-ChildItem native -Recurse -File | ForEach-Object { Write-Host $_.FullName }
+            throw "No native archives, checksums, or install scripts found to attach. Found $($assets.Count)."
+          }
+
+          Write-Host "Attaching $($assets.Count) files:"
+          $assets | ForEach-Object { Write-Host "  $($_.FullName)" }
 
           # Looking up the rolling tag via /releases/tags misses untagged drafts.
           # Those still have tag_name=ci, so create 422s with "already exists".
           # Sweep every matching release by id, including drafts.
-          delete_ci_release() {
-            local ids id
-            ids="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/releases" --jq '.[] | select(.tag_name == "ci") | .id')"
-            while IFS= read -r id; do
-              [ -z "${id}" ] && continue
-              echo "Deleting existing ci release id=${id}"
-              gh api --method DELETE "repos/${GITHUB_REPOSITORY}/releases/${id}" || true
-            done <<< "${ids}"
-            gh api --method DELETE "repos/${GITHUB_REPOSITORY}/git/refs/tags/ci" || true
+          function Delete-CiRelease {
+            $ids = @(gh api --paginate "repos/$env:GITHUB_REPOSITORY/releases" --jq '.[] | select(.tag_name == "ci") | .id')
+            foreach ($id in $ids) {
+              if ([string]::IsNullOrWhiteSpace($id)) { continue }
+              Write-Host "Deleting existing ci release id=$id"
+              gh api --method DELETE "repos/$env:GITHUB_REPOSITORY/releases/$id" | Out-Null
+            }
+            gh api --method DELETE "repos/$env:GITHUB_REPOSITORY/git/refs/tags/ci" 2>$null | Out-Null
+            $global:LASTEXITCODE = 0
           }
 
-          delete_ci_release
+          Delete-CiRelease
 
-          notes="Rolling native build from \`${NDNX_SHA}\`. Not a release.
+          $notes = @"
+          Rolling native build from ``$env:NDNX_SHA``. Not a release.
 
-          Install: \`curl -fsSL https://github.com/${GITHUB_REPOSITORY}/releases/download/ci/install.sh | NDNX_VERSION=ci sh\`
+          Install: ``curl -fsSL https://github.com/$env:GITHUB_REPOSITORY/releases/download/ci/install.sh | NDNX_VERSION=ci sh``
 
-          Update: \`ndnx --update ci\`"
+          Update: ``ndnx --update ci``
+          "@
 
-          attempt=0
-          until gh release create ci --prerelease --latest=false --title "CI" \
-            --target "${NDNX_SHA}" \
-            --notes "${notes}" \
-            "${assets[@]}"; do
-            attempt=$((attempt + 1))
-            if [ "${attempt}" -ge 8 ]; then
-              echo "gh release create ci failed after ${attempt} attempts" >&2
-              exit 1
-            fi
-            echo "ci tag still present (attempt ${attempt}); retrying..."
-            sleep $((attempt * 3))
-            delete_ci_release
-          done
+          # Create the tag/release with no files. Passing assets to `gh release create`
+          # can succeed with an empty upload list; `gh release upload` is how
+          # publish.yml actually attaches archives.
+          $created = $false
+          for ($attempt = 1; $attempt -le 8; $attempt++) {
+            gh release create ci --prerelease --latest=false --title CI --target $env:NDNX_SHA --notes $notes
+            if ($LASTEXITCODE -eq 0) { $created = $true; break }
+            Write-Host "ci tag still present (attempt $attempt); retrying..."
+            Start-Sleep -Seconds ($attempt * 3)
+            Delete-CiRelease
+          }
+          if (-not $created) { throw "gh release create ci failed after 8 attempts" }
+
+          gh release upload ci @($assets.FullName) --clobber
+          if ($LASTEXITCODE -ne 0) { throw "gh release upload ci failed" }
+
+          $published = gh release view ci --json assets | ConvertFrom-Json
+          $names = @($published.assets.name)
+          Write-Host "Published $($names.Count) assets: $($names -join ', ')"
+          if ($names.Count -lt 3) {
+            throw "Expected archives on the ci release, found $($names.Count)."
+          }

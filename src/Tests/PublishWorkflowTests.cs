@@ -23,10 +23,13 @@ public class PublishWorkflowTests
         Assert.Contains("--prerelease", yml);
         Assert.Contains("--latest=false", yml);
         Assert.Contains("release create ci", yml);
+        Assert.Contains("gh release upload ci", yml);
+        Assert.Contains("--clobber", yml);
         Assert.Contains("select(.tag_name == \"ci\")", yml);
         Assert.Contains("git/refs/tags/ci", yml);
-        Assert.Contains("--target \"${NDNX_SHA}\"", yml);
-        Assert.Contains("until gh release create ci", yml);
+        Assert.Contains("--target $env:NDNX_SHA", yml);
+        Assert.Contains("Expected archives on the ci release", yml);
+        Assert.Contains("Get-ChildItem native -Recurse -File", yml);
         Assert.Contains("cancel-in-progress: false", yml);
         Assert.DoesNotContain("gh release view ci >/dev/null", yml);
         Assert.Contains("name: native-aot-${{ matrix.rid }}", yml);
