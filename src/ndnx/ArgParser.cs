@@ -254,7 +254,7 @@ public static class ArgParser
         if (packageId is not null)
         {
             var fromOperand = NormalizeUpdateVersion(packageId);
-            if (!PackageVersion.TryParse(fromOperand, out _))
+            if (!IsUpdateTarget(fromOperand))
             {
                 return Invocation.Failed(
                     $"--update cannot be combined with a package identity. Unexpected '{packageId}'.");
@@ -271,7 +271,7 @@ public static class ArgParser
         if (version is { Length: 0 })
             return Invocation.Failed("Missing value for --update.");
 
-        if (version is not null && !PackageVersion.TryParse(version, out _))
+        if (version is not null && !IsUpdateTarget(version))
             return Invocation.Failed($"Invalid version '{version}'.");
 
         return new Invocation
@@ -288,8 +288,11 @@ public static class ArgParser
         var text = value.Trim();
         if (text.Length > 0 && (text[0] is 'v' or 'V'))
             text = text[1..];
-        return text;
+        return SelfUpdate.IsCiChannel(text) ? SelfUpdate.CiChannel : text;
     }
+
+    static bool IsUpdateTarget(string version)
+        => SelfUpdate.IsCiChannel(version) || PackageVersion.TryParse(version, out _);
 
     static bool TryParseIdentity(string token, out string? packageId, out string? version, out string? error)
     {

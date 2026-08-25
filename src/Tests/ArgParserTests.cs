@@ -157,6 +157,21 @@ public class ArgParserTests
         Assert.Equal("1.2.3", parsed.Version);
     }
 
+    [Theory]
+    [InlineData("--update", "ci")]
+    [InlineData("--update", "CI")]
+    [InlineData("--update=ci")]
+    [InlineData("--update=vci")]
+    public void Update_accepts_the_ci_channel(params string[] args)
+    {
+        var parsed = ArgParser.Parse(args);
+
+        Assert.True(parsed.Success);
+        Assert.True(parsed.Update);
+        Assert.Null(parsed.PackageId);
+        Assert.Equal(SelfUpdate.CiChannel, parsed.Version);
+    }
+
     [Fact]
     public void Update_rejects_a_package_identity()
     {

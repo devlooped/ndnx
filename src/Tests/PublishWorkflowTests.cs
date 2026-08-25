@@ -13,6 +13,36 @@ public class PublishWorkflowTests
     ];
 
     [Fact]
+    public void Ci_release_workflow_publishes_a_rolling_prerelease()
+    {
+        var yml = File.ReadAllText(Path.Combine(FindRepoRoot(), ".github", "workflows", "ci-release.yml"));
+
+        Assert.Contains("workflow_run", yml);
+        Assert.Contains("workflows: [build]", yml);
+        Assert.Contains("head_branch == 'main'", yml);
+        Assert.Contains("--prerelease", yml);
+        Assert.Contains("--latest=false", yml);
+        Assert.Contains("release create ci", yml);
+        Assert.Contains("release delete ci", yml);
+        Assert.Contains("--cleanup-tag", yml);
+        Assert.Contains("name: native-aot-${{ matrix.rid }}", yml);
+        Assert.Contains("dotnet publish", yml);
+        Assert.Contains("PublishAot", yml);
+        Assert.Contains("src/nativepack", yml);
+        Assert.DoesNotContain("dotnet nuget push", yml);
+        Assert.DoesNotContain("sleet push", yml);
+        Assert.DoesNotContain("osx-", yml);
+        Assert.DoesNotContain("macos-", yml);
+        Assert.DoesNotContain("arm64", yml);
+
+        foreach (var (os, rid) in ExpectedMatrix.Where(entry => entry.Rid is "linux-x64" or "win-x64"))
+        {
+            Assert.Contains($"os: {os}", yml);
+            Assert.Contains($"rid: {rid}", yml);
+        }
+    }
+
+    [Fact]
     public void Release_workflow_builds_the_six_rid_matrix_and_attaches_archives()
     {
         var yml = File.ReadAllText(FindPublishWorkflow());

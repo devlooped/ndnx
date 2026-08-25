@@ -103,12 +103,20 @@ trap 'rm -rf "$tmp"' EXIT INT TERM
 
 if [ -z "$ARCHIVE" ]; then
     if [ -n "$VERSION" ]; then
-        tag=$VERSION
-        case "$tag" in
-            v*) ;;
-            *) tag="v${tag}" ;;
+        case "$(printf '%s' "$VERSION" | tr '[:upper:]' '[:lower:]')" in
+            ci)
+                tag=ci
+                version=ci
+                ;;
+            v*)
+                tag=$VERSION
+                version=${tag#v}
+                ;;
+            *)
+                tag="v${VERSION}"
+                version=$VERSION
+                ;;
         esac
-        version=${tag#v}
     else
         json=$(github_json "https://api.github.com/repos/${REPO}/releases/latest")
         tag=$(printf '%s' "$json" | json_string tag_name)

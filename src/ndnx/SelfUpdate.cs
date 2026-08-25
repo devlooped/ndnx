@@ -14,6 +14,13 @@ namespace ndnx;
 public static class SelfUpdate
 {
     public const string DefaultRepository = "devlooped/ndnx";
+    public const string CiChannel = "ci";
+
+    public static bool IsCiChannel(string? value)
+        => value is not null && value.Equals(CiChannel, StringComparison.OrdinalIgnoreCase);
+
+    public static string ReleaseTag(string version)
+        => IsCiChannel(version) ? CiChannel : "v" + version;
 
     public static async Task<int> RunAsync(
         Invocation invocation,
@@ -31,17 +38,31 @@ public static class SelfUpdate
 
         EnsureGitHubHeaders(http);
 
-        var target = invocation.Version is { } specified
-            ? NormalizeVersion(specified)
-            : await ResolveLatestVersionAsync(http, repo, log, cancellationToken).ConfigureAwait(false);
-
-        if (!PackageVersion.TryParse(target, out var targetVersion))
-            throw new InvalidOperationException($"Invalid version '{target}'.");
-
-        if (PackageVersion.TryParse(currentVersion, out var current) && current.Equals(targetVersion))
+        string targetLabel;
+        string tag;
+        if (IsCiChannel(invocation.Version))
         {
-            host.Out.WriteLine($"ndnx is already {targetVersion}");
-            return 0;
+            // Rolling prerelease: assets under tag `ci` change in place, so always download.
+            targetLabel = CiChannel;
+            tag = CiChannel;
+        }
+        else
+        {
+            var target = invocation.Version is { } specified
+                ? NormalizeVersion(specified)
+                : await ResolveLatestVersionAsync(http, repo, log, cancellationToken).ConfigureAwait(false);
+
+            if (!PackageVersion.TryParse(target, out var targetVersion))
+                throw new InvalidOperationException($"Invalid version '{target}'.");
+
+            if (PackageVersion.TryParse(currentVersion, out var current) && current.Equals(targetVersion))
+            {
+                host.Out.WriteLine($"ndnx is already {targetVersion}");
+                return 0;
+            }
+
+            targetLabel = targetVersion.ToString();
+            tag = ReleaseTag(targetLabel);
         }
 
         if (!File.Exists(executable))
@@ -50,10 +71,9 @@ public static class SelfUpdate
                 $"Cannot self-update: '{executable}' was not found.");
         }
 
-        host.Out.WriteLine($"Updating to {targetVersion}");
+        host.Out.WriteLine($"Updating to {targetLabel}");
 
-        var tag = "v" + targetVersion;
-        var archiveName = ArchiveFileName(rid, targetVersion.ToString());
+        var archiveName = ArchiveFileName(rid, targetLabel);
         var binaryName = BinaryFileName(rid);
         var archiveUrl = AssetUrl(repo, tag, archiveName);
         var shaUrl = archiveUrl + ".sha256";
