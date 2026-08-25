@@ -1,5 +1,17 @@
 # Changelog
 
+## [v0.6.5](https://github.com/devlooped/ndnx/tree/v0.6.5) (2026-08-25)
+
+[Full Changelog](https://github.com/devlooped/ndnx/compare/ci...v0.6.5)
+
+:twisted_rightwards_arrows: Merged:
+
+- Skip publish.yml for the rolling ci tag [\#14](https://github.com/devlooped/ndnx/pull/14) (@kzu)
+
+## [ci](https://github.com/devlooped/ndnx/tree/ci) (2026-08-25)
+
+[Full Changelog](https://github.com/devlooped/ndnx/compare/v0.6.4...ci)
+
 ## [v0.6.4](https://github.com/devlooped/ndnx/tree/v0.6.4) (2026-08-25)
 
 [Full Changelog](https://github.com/devlooped/ndnx/compare/v0.6.3...v0.6.4)
