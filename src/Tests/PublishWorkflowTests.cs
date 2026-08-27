@@ -29,6 +29,7 @@ public class PublishWorkflowTests
         Assert.Contains("git/refs/tags/ci", yml);
         Assert.Contains("--target $env:NDX_SHA", yml);
         Assert.Contains("Expected archives on the ci release", yml);
+        Assert.Contains("Get-Item install.sh, install.ps1, uninstall.sh, uninstall.ps1", yml);
         Assert.Contains("Get-ChildItem native -Recurse -File", yml);
         Assert.Contains("cancel-in-progress: false", yml);
         Assert.DoesNotContain("gh release view ci >/dev/null", yml);
@@ -64,6 +65,7 @@ public class PublishWorkflowTests
         Assert.Contains("upload-artifact", yml);
         Assert.Contains("if-no-files-found: error", yml);
         Assert.Contains("gh release upload", yml);
+        Assert.Contains("Get-Item install.sh, install.ps1, uninstall.sh, uninstall.ps1", yml);
         Assert.Contains("needs: native-aot", yml);
         Assert.Contains("src/nativepack", yml);
         Assert.DoesNotContain("dotnet nuget push", yml);

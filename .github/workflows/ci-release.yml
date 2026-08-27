@@ -105,10 +105,10 @@ jobs:
           $assets = @(Get-ChildItem native -Recurse -File | Where-Object {
             $_.Extension -in '.zip', '.sha256' -or $_.Name.EndsWith('.tar.gz')
           })
-          $assets += Get-Item install.sh, install.ps1
+          $assets += Get-Item install.sh, install.ps1, uninstall.sh, uninstall.ps1
           if ($assets.Count -lt 3) {
             Get-ChildItem native -Recurse -File | ForEach-Object { Write-Host $_.FullName }
-            throw "No native archives, checksums, or install scripts found to attach. Found $($assets.Count)."
+            throw "No native archives, checksums, or install/uninstall scripts found to attach. Found $($assets.Count)."
           }
 
           Write-Host "Attaching $($assets.Count) files:"
@@ -136,6 +136,8 @@ jobs:
           Install: ``curl -fsSL https://github.com/$env:GITHUB_REPOSITORY/releases/download/ci/install.sh | NDX_VERSION=ci sh``
 
           Update: ``ndx --update ci``
+
+          Uninstall: ``curl -fsSL https://github.com/$env:GITHUB_REPOSITORY/releases/download/ci/uninstall.sh | sh``
           "@
 
           # Create the tag/release with no files. Passing assets to `gh release create`
