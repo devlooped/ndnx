@@ -2,7 +2,15 @@
 
 ## [ci](https://github.com/devlooped/ndx/tree/ci) (2026-08-27)
 
-[Full Changelog](https://github.com/devlooped/ndx/compare/v1.0.0...ci)
+[Full Changelog](https://github.com/devlooped/ndx/compare/v1.0.1...ci)
+
+## [v1.0.1](https://github.com/devlooped/ndx/tree/v1.0.1) (2026-08-27)
+
+[Full Changelog](https://github.com/devlooped/ndx/compare/v1.0.0...v1.0.1)
+
+:sparkles: Implemented enhancements:
+
+- Add uninstall scripts [\#17](https://github.com/devlooped/ndx/pull/17) (@kzu)
 
 ## [v1.0.0](https://github.com/devlooped/ndx/tree/v1.0.0) (2026-08-27)
 
