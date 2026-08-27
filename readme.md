@@ -30,6 +30,10 @@ Windows (PowerShell):
 irm https://github.com/devlooped/ndx/releases/latest/download/install.ps1 | iex
 ```
 
+> Alternatively (perhaps of debatable utility), you can install using the .NET SDK too:
+> `dotnet tool install -g ndx`
+
+
 ## Update
 
 Self-update the installed binary (optional version, including downgrades):

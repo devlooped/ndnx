@@ -48,25 +48,20 @@ jobs:
       - name: ⚙ dotnet
         uses: devlooped/actions-dotnet-env@v1
 
-      - name: 🧊 publish
-        shell: pwsh
-        run: |
-          $out = "artifacts/${{ matrix.rid }}"
-          New-Item -ItemType Directory -Force -Path $out | Out-Null
-          dotnet publish src/ndx/ndx.csproj -c $env:Configuration -r ${{ matrix.rid }} --self-contained -p:PublishAot=true -o $out -bl:"publish-${{ matrix.rid }}.binlog"
-
       - name: 📦 pack
         shell: pwsh
         run: |
-          dotnet run --project src/nativepack --no-launch-profile -c $env:Configuration -- artifacts/${{ matrix.rid }} ${{ matrix.rid }} artifacts ci
+          dotnet pack src/ndx/ndx.csproj -c $env:Configuration -r ${{ matrix.rid }} -bl:"pack-${{ matrix.rid }}.binlog"
+          $nupkg = @(Get-ChildItem bin -Filter "ndx.${{ matrix.rid }}.*.nupkg" | Where-Object Name -NotLike '*.symbols.nupkg')
+          if ($nupkg.Count -ne 1) { throw "Expected one RID nupkg for ${{ matrix.rid }}, found $($nupkg.Count)." }
+          New-Item -ItemType Directory -Force -Path artifacts | Out-Null
+          dotnet run --project src/nativepack --no-launch-profile -c $env:Configuration -- $nupkg[0].FullName ${{ matrix.rid }} artifacts ci
 
       - name: 📤 artifact
         uses: actions/upload-artifact@v4
         with:
           name: native-aot-${{ matrix.rid }}
           path: |
-            artifacts/${{ matrix.rid }}/ndx
-            artifacts/${{ matrix.rid }}/ndx.exe
             artifacts/ndx-*.zip
             artifacts/ndx-*.tar.gz
             artifacts/ndx-*.sha256

@@ -44,8 +44,7 @@ public class InstallScriptTests
         using var dir = new TempDir();
 
         var payload = "installed-by-script"u8.ToArray();
-        File.WriteAllBytes(Path.Combine(dir.Publish, "ndx.exe"), payload);
-        var packed = NativePacker.Pack(dir.Publish, "win-x64", dir.Output, "1.0.0");
+        var packed = NativePacker.Pack(RidNupkg.Write(dir.Publish, "win-x64", payload), "win-x64", dir.Output, "1.0.0");
 
         var start = new ProcessStartInfo
         {
@@ -91,8 +90,7 @@ public class InstallScriptTests
         using var dir = new TempDir();
 
         var payload = "installed-by-script"u8.ToArray();
-        File.WriteAllBytes(Path.Combine(dir.Publish, "ndx.exe"), payload);
-        var packed = NativePacker.Pack(dir.Publish, "win-x64", dir.Output, "1.0.0");
+        var packed = NativePacker.Pack(RidNupkg.Write(dir.Publish, "win-x64", payload), "win-x64", dir.Output, "1.0.0");
 
         var installed = RunPowershell(install, dir, packed.ArchivePath, skipPath: true);
         Assert.True(installed.ExitCode == 0, $"install.ps1 failed ({installed.ExitCode}).{Environment.NewLine}{installed.Stdout}{Environment.NewLine}{installed.Stderr}");
@@ -137,8 +135,7 @@ public class InstallScriptTests
 
         var root = FindRepoRoot();
         using var dir = new TempDir();
-        File.WriteAllBytes(Path.Combine(dir.Publish, "ndx"), "unix-ndx"u8.ToArray());
-        var packed = NativePacker.Pack(dir.Publish, "linux-x64", dir.Output, "1.0.0");
+        var packed = NativePacker.Pack(RidNupkg.Write(dir.Publish, "linux-x64", "unix-ndx"u8.ToArray()), "linux-x64", dir.Output, "1.0.0");
 
         RunInstallSh(bash, root, dir, packed.ArchivePath, skipPath: false);
         RunInstallSh(bash, root, dir, packed.ArchivePath, skipPath: false);
@@ -159,8 +156,7 @@ public class InstallScriptTests
 
         var root = FindRepoRoot();
         using var dir = new TempDir();
-        File.WriteAllBytes(Path.Combine(dir.Publish, "ndx"), "unix-ndx"u8.ToArray());
-        var packed = NativePacker.Pack(dir.Publish, "linux-x64", dir.Output, "1.0.0");
+        var packed = NativePacker.Pack(RidNupkg.Write(dir.Publish, "linux-x64", "unix-ndx"u8.ToArray()), "linux-x64", dir.Output, "1.0.0");
 
         RunInstallSh(bash, root, dir, packed.ArchivePath, skipPath: true);
 
@@ -177,8 +173,7 @@ public class InstallScriptTests
         var root = FindRepoRoot();
         using var dir = new TempDir();
         File.WriteAllText(Path.Combine(dir.Home, ".zshrc"), "# keep me\n");
-        File.WriteAllBytes(Path.Combine(dir.Publish, "ndx"), "unix-ndx"u8.ToArray());
-        var packed = NativePacker.Pack(dir.Publish, "linux-x64", dir.Output, "1.0.0");
+        var packed = NativePacker.Pack(RidNupkg.Write(dir.Publish, "linux-x64", "unix-ndx"u8.ToArray()), "linux-x64", dir.Output, "1.0.0");
 
         RunInstallSh(bash, root, dir, packed.ArchivePath, skipPath: false);
         Assert.True(File.Exists(Path.Combine(dir.Prefix, "ndx")));
@@ -201,8 +196,7 @@ public class InstallScriptTests
 
         var root = FindRepoRoot();
         using var dir = new TempDir();
-        File.WriteAllBytes(Path.Combine(dir.Publish, "ndx"), "unix-ndx"u8.ToArray());
-        var packed = NativePacker.Pack(dir.Publish, "linux-x64", dir.Output, "1.0.0");
+        var packed = NativePacker.Pack(RidNupkg.Write(dir.Publish, "linux-x64", "unix-ndx"u8.ToArray()), "linux-x64", dir.Output, "1.0.0");
 
         RunInstallSh(bash, root, dir, packed.ArchivePath, skipPath: false);
         RunUninstallSh(bash, root, dir, skipPath: true);
@@ -282,16 +276,20 @@ public class InstallScriptTests
     }
 
     [Fact]
-    public void Workflow_does_not_publish_nuget_or_sleet()
+    public void Workflow_publishes_nuget_and_sleet_from_release_and_ci_build()
     {
         var yml = File.ReadAllText(Path.Combine(FindRepoRoot(), ".github", "workflows", "publish.yml"));
         var build = File.ReadAllText(Path.Combine(FindRepoRoot(), ".github", "workflows", "build.yml"));
         var ci = File.ReadAllText(Path.Combine(FindRepoRoot(), ".github", "workflows", "ci-release.yml"));
-        Assert.DoesNotContain("dotnet nuget push", yml);
-        Assert.DoesNotContain("sleet push", yml);
-        Assert.DoesNotContain("NUGET_API_KEY", yml);
-        Assert.DoesNotContain("SLEET_CONNECTION", yml);
-        Assert.DoesNotContain("sleet push", build);
+        Assert.Contains("dotnet nuget push", yml);
+        Assert.Contains("sleet push", yml);
+        Assert.Contains("NUGET_API_KEY", yml);
+        Assert.Contains("SLEET_CONNECTION", yml);
+        Assert.Contains("sleet push", build);
+        Assert.Contains("SLEET_CONNECTION", build);
+        Assert.Contains("-p:RuntimeIdentifiers=any", build);
+        Assert.Contains("-r any", build);
+        Assert.DoesNotContain("dotnet nuget push", ci);
         Assert.DoesNotContain("sleet push", ci);
         Assert.Contains("install.sh", yml);
         Assert.Contains("install.ps1", yml);

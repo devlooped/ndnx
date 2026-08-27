@@ -14,9 +14,9 @@ public class NativePackerTests
     {
         using var dir = new TempDir();
         var payload = "windows-native-bytes"u8.ToArray();
-        File.WriteAllBytes(Path.Combine(dir.Publish, "ndx.exe"), payload);
+        var nupkg = RidNupkg.Write(dir.Nupkg, rid, payload);
 
-        var result = NativePacker.Pack(dir.Publish, rid, dir.Output, "1.2.3");
+        var result = NativePacker.Pack(nupkg, rid, dir.Output, "1.2.3");
 
         Assert.Equal($"ndx-1.2.3-{rid}.zip", Path.GetFileName(result.ArchivePath));
         Assert.Equal($"ndx-ci-{rid}.zip", NativePacker.ArchiveFileName(rid, "ci"));
@@ -45,9 +45,9 @@ public class NativePackerTests
     {
         using var dir = new TempDir();
         var payload = "unix-native-bytes"u8.ToArray();
-        File.WriteAllBytes(Path.Combine(dir.Publish, "ndx"), payload);
+        var nupkg = RidNupkg.Write(dir.Nupkg, rid, payload);
 
-        var result = NativePacker.Pack(dir.Publish, rid, dir.Output, "4.5.6");
+        var result = NativePacker.Pack(nupkg, rid, dir.Output, "4.5.6");
 
         Assert.Equal($"ndx-4.5.6-{rid}.tar.gz", Path.GetFileName(result.ArchivePath));
 
@@ -69,9 +69,9 @@ public class NativePackerTests
     public void Program_main_packs_through_the_shipped_entry_point()
     {
         using var dir = new TempDir();
-        File.WriteAllBytes(Path.Combine(dir.Publish, "ndx.exe"), "entry-point"u8.ToArray());
+        var nupkg = RidNupkg.Write(dir.Nupkg, "win-x64", "entry-point"u8.ToArray());
 
-        var code = PackProgram.Main([dir.Publish, "win-x64", dir.Output, "9.9.9"]);
+        var code = PackProgram.Main([nupkg, "win-x64", dir.Output, "9.9.9"]);
 
         Assert.Equal(0, code);
         var archive = Path.Combine(dir.Output, "ndx-9.9.9-win-x64.zip");
@@ -88,10 +88,23 @@ public class NativePackerTests
     public void Missing_binary_is_a_packer_error()
     {
         using var dir = new TempDir();
+        var nupkg = Path.Combine(dir.Nupkg, "empty.nupkg");
+        ZipFile.Open(nupkg, ZipArchiveMode.Create).Dispose();
+
         var ex = Assert.Throws<FileNotFoundException>(
-            () => NativePacker.Pack(dir.Publish, "win-x64", dir.Output, "1.0.0"));
+            () => NativePacker.Pack(nupkg, "win-x64", dir.Output, "1.0.0"));
         Assert.Contains("ndx.exe", ex.Message);
-        Assert.Equal(1, PackProgram.Main([dir.Publish, "linux-x64", dir.Output, "1.0.0"]));
+        Assert.Equal(1, PackProgram.Main([nupkg, "linux-x64", dir.Output, "1.0.0"]));
+    }
+
+    [Fact]
+    public void Missing_nupkg_is_a_packer_error()
+    {
+        using var dir = new TempDir();
+        var missing = Path.Combine(dir.Nupkg, "nope.nupkg");
+        var ex = Assert.Throws<FileNotFoundException>(
+            () => NativePacker.Pack(missing, "win-x64", dir.Output, "1.0.0"));
+        Assert.Contains("nope.nupkg", ex.Message);
     }
 
     static void AssertSha256File(NativePackResult result)
@@ -107,12 +120,12 @@ public class NativePackerTests
     sealed class TempDir : IDisposable
     {
         public string Root { get; } = Path.Combine(Path.GetTempPath(), "ndx-pack-tests", Guid.NewGuid().ToString("n"));
-        public string Publish => Path.Combine(Root, "publish");
+        public string Nupkg => Path.Combine(Root, "nupkg");
         public string Output => Path.Combine(Root, "out");
 
         public TempDir()
         {
-            Directory.CreateDirectory(Publish);
+            Directory.CreateDirectory(Nupkg);
             Directory.CreateDirectory(Output);
         }
 

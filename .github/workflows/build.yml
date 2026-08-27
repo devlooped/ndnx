@@ -1,4 +1,5 @@
 ﻿# Builds and runs tests in all three supported OSes
+# Pushes CI feed if secrets.SLEET_CONNECTION is provided
 
 name: build
 on: 
@@ -20,11 +21,14 @@ on:
 
 env:
   DOTNET_NOLOGO: true
+  PackOnBuild: true
+  GeneratePackageOnBuild: true
   VersionPrefix: 42.42.${{ github.run_number }}
   VersionLabel: ${{ github.ref }}
   GH_TOKEN: ${{ secrets.GH_TOKEN }}
   MSBUILDTERMINALLOGGER: auto
   Configuration: ${{ github.event.inputs.configuration || 'Release' }}
+  SLEET_FEED_URL: ${{ vars.SLEET_FEED_URL }}
 
 defaults:
   run:
@@ -65,7 +69,9 @@ jobs:
         uses: devlooped/actions-dotnet-env@v1
 
       - name: 🙏 build
-        run: dotnet build -m:1 -bl:build.binlog
+        run: |
+          dotnet build -m:1 -bl:build.binlog -p:RuntimeIdentifiers=any
+          dotnet build src/ndx/ndx.csproj -bl:runtime.binlog -p:RuntimeIdentifiers=any -r any
 
       - name: 🧪 test
         shell: pwsh
@@ -77,6 +83,14 @@ jobs:
         with:
           name: logs
           path: '*.binlog'
+
+      - name: 🚀 sleet
+        env:
+          SLEET_CONNECTION: ${{ secrets.SLEET_CONNECTION }}
+        if: env.SLEET_CONNECTION != ''
+        run: |
+          dotnet tool update sleet -g --allow-downgrade --version $(curl -s --compressed ${{ vars.SLEET_FEED_URL }} | jq '.["sleet:version"]' -r)        
+          sleet push bin --config none -f --verbose -p "SLEET_FEED_CONTAINER=nuget" -p "SLEET_FEED_CONNECTIONSTRING=${{ secrets.SLEET_CONNECTION }}" -p "SLEET_FEED_TYPE=azure" || echo "No packages found"
 
   dotnet-format:
     runs-on: ubuntu-latest

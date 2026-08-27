@@ -34,9 +34,10 @@ public class PublishWorkflowTests
         Assert.Contains("cancel-in-progress: false", yml);
         Assert.DoesNotContain("gh release view ci >/dev/null", yml);
         Assert.Contains("name: native-aot-${{ matrix.rid }}", yml);
-        Assert.Contains("dotnet publish", yml);
-        Assert.Contains("PublishAot", yml);
+        Assert.Contains("dotnet pack src/ndx/ndx.csproj", yml);
+        Assert.Contains("-r ${{ matrix.rid }}", yml);
         Assert.Contains("src/nativepack", yml);
+        Assert.DoesNotContain("dotnet publish", yml);
         Assert.DoesNotContain("dotnet nuget push", yml);
         Assert.DoesNotContain("sleet push", yml);
         Assert.DoesNotContain("osx-", yml);
@@ -60,16 +61,32 @@ public class PublishWorkflowTests
         Assert.Contains("released", yml);
         Assert.Contains("github.event.release.tag_name != 'ci'", yml);
         Assert.Contains("name: native-aot-${{ matrix.rid }}", yml);
-        Assert.Contains("dotnet publish", yml);
-        Assert.Contains("PublishAot", yml);
+        Assert.DoesNotContain("dotnet publish", yml);
         Assert.Contains("upload-artifact", yml);
         Assert.Contains("if-no-files-found: error", yml);
         Assert.Contains("gh release upload", yml);
         Assert.Contains("Get-Item install.sh, install.ps1, uninstall.sh, uninstall.ps1", yml);
         Assert.Contains("needs: native-aot", yml);
         Assert.Contains("src/nativepack", yml);
-        Assert.DoesNotContain("dotnet nuget push", yml);
-        Assert.DoesNotContain("sleet push", yml);
+        Assert.Contains("dotnet pack src/ndx/ndx.csproj", yml);
+        Assert.Contains("-r ${{ matrix.rid }}", yml);
+        Assert.Contains("-r any", yml);
+        Assert.Contains("dotnet nuget push", yml);
+        Assert.Contains("https://api.nuget.org/v3/index.json", yml);
+        Assert.Contains("NUGET_API_KEY", yml);
+        Assert.Contains("github.event.action != 'prereleased'", yml);
+        Assert.Contains("sleet push", yml);
+        Assert.Contains("SLEET_CONNECTION", yml);
+        Assert.Contains("name: package-${{ matrix.rid }}", yml);
+        Assert.Contains("name: package-any", yml);
+
+        var runtimeNuget = yml.IndexOf("foreach ($package in $runtimePackages)", StringComparison.Ordinal);
+        var pointerNuget = yml.IndexOf("foreach ($package in $pointerPackages)", StringComparison.Ordinal);
+        Assert.True(runtimeNuget >= 0 && pointerNuget > runtimeNuget, "RID/any nupkgs must be nuget-pushed before the pointer.");
+
+        var runtimeSleet = yml.IndexOf("sleet push $runtimePath", StringComparison.Ordinal);
+        var pointerSleet = yml.IndexOf("sleet push $pointerPath", StringComparison.Ordinal);
+        Assert.True(runtimeSleet >= 0 && pointerSleet > runtimeSleet, "RID/any nupkgs must be sleet-pushed before the pointer.");
 
         foreach (var (os, rid) in ExpectedMatrix)
         {
