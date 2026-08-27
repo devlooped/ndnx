@@ -39,6 +39,20 @@ ndx --update
 ndx --update 0.1.0
 ```
 
+## Uninstall
+
+macOS / Linux:
+
+```bash
+curl -fsSL https://github.com/devlooped/ndx/releases/latest/download/uninstall.sh | sh
+```
+
+Windows (PowerShell):
+
+```powershell
+irm https://github.com/devlooped/ndx/releases/latest/download/uninstall.ps1 | iex
+```
+
 ## Usage
 *ndx*
 

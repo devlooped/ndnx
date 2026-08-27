@@ -11,6 +11,8 @@ public class InstallScriptTests
         var root = FindRepoRoot();
         Assert.True(File.Exists(Path.Combine(root, "install.sh")), "install.sh");
         Assert.True(File.Exists(Path.Combine(root, "install.ps1")), "install.ps1");
+        Assert.True(File.Exists(Path.Combine(root, "uninstall.sh")), "uninstall.sh");
+        Assert.True(File.Exists(Path.Combine(root, "uninstall.ps1")), "uninstall.ps1");
     }
 
     [Fact]
@@ -81,6 +83,29 @@ public class InstallScriptTests
     }
 
     [Fact]
+    public void Powershell_uninstall_script_removes_the_binary()
+    {
+        var root = FindRepoRoot();
+        var install = Path.Combine(root, "install.ps1");
+        var uninstall = Path.Combine(root, "uninstall.ps1");
+        using var dir = new TempDir();
+
+        var payload = "installed-by-script"u8.ToArray();
+        File.WriteAllBytes(Path.Combine(dir.Publish, "ndx.exe"), payload);
+        var packed = NativePacker.Pack(dir.Publish, "win-x64", dir.Output, "1.0.0");
+
+        var installed = RunPowershell(install, dir, packed.ArchivePath, skipPath: true);
+        Assert.True(installed.ExitCode == 0, $"install.ps1 failed ({installed.ExitCode}).{Environment.NewLine}{installed.Stdout}{Environment.NewLine}{installed.Stderr}");
+        var dest = Path.Combine(dir.Prefix, "ndx.exe");
+        Assert.True(File.Exists(dest), installed.Stdout);
+
+        var (exit, stdout, stderr) = RunPowershell(uninstall, dir, archive: null, skipPath: true);
+        Assert.True(exit == 0, $"uninstall.ps1 failed ({exit}).{Environment.NewLine}{stdout}{Environment.NewLine}{stderr}");
+        Assert.False(File.Exists(dest), stdout);
+        Assert.Contains("removed", stdout, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Powershell_installer_persists_user_path_and_broadcasts_environment_change()
     {
         var ps = File.ReadAllText(Path.Combine(FindRepoRoot(), "install.ps1"));
@@ -89,6 +114,19 @@ public class InstallScriptTests
         Assert.Contains("'Environment'", ps);
         Assert.Contains("0x1a", ps);
         Assert.Contains("Add-NdxToUserPath", ps);
+    }
+
+    [Fact]
+    public void Powershell_uninstaller_removes_user_path_and_broadcasts_environment_change()
+    {
+        var ps = File.ReadAllText(Path.Combine(FindRepoRoot(), "uninstall.ps1"));
+        Assert.Contains("SetEnvironmentVariable('Path', $updated, 'User')", ps);
+        Assert.Contains("SendMessageTimeout", ps);
+        Assert.Contains("'Environment'", ps);
+        Assert.Contains("0x1a", ps);
+        Assert.Contains("Remove-NdxFromUserPath", ps);
+        Assert.Contains("ndnx", ps);
+        Assert.Contains("LOCALAPPDATA", ps);
     }
 
     [Fact]
@@ -131,6 +169,104 @@ public class InstallScriptTests
     }
 
     [Fact]
+    public void Shell_uninstaller_removes_binary_and_path_block_from_zshrc()
+    {
+        var bash = FindBash();
+        Assert.True(bash is not null, "bash is required to verify uninstall.sh");
+
+        var root = FindRepoRoot();
+        using var dir = new TempDir();
+        File.WriteAllText(Path.Combine(dir.Home, ".zshrc"), "# keep me\n");
+        File.WriteAllBytes(Path.Combine(dir.Publish, "ndx"), "unix-ndx"u8.ToArray());
+        var packed = NativePacker.Pack(dir.Publish, "linux-x64", dir.Output, "1.0.0");
+
+        RunInstallSh(bash, root, dir, packed.ArchivePath, skipPath: false);
+        Assert.True(File.Exists(Path.Combine(dir.Prefix, "ndx")));
+
+        RunUninstallSh(bash, root, dir, skipPath: false);
+
+        Assert.False(File.Exists(Path.Combine(dir.Prefix, "ndx")));
+        var zshrc = File.ReadAllText(Path.Combine(dir.Home, ".zshrc"));
+        Assert.Contains("# keep me", zshrc);
+        Assert.DoesNotContain("# >>> ndx path >>>", zshrc);
+        Assert.DoesNotContain("# <<< ndx path <<<", zshrc);
+        Assert.DoesNotContain(ToBashPath(bash, dir.Prefix), zshrc);
+    }
+
+    [Fact]
+    public void Shell_uninstaller_skip_path_leaves_rc_intact()
+    {
+        var bash = FindBash();
+        Assert.True(bash is not null, "bash is required to verify uninstall.sh PATH skip");
+
+        var root = FindRepoRoot();
+        using var dir = new TempDir();
+        File.WriteAllBytes(Path.Combine(dir.Publish, "ndx"), "unix-ndx"u8.ToArray());
+        var packed = NativePacker.Pack(dir.Publish, "linux-x64", dir.Output, "1.0.0");
+
+        RunInstallSh(bash, root, dir, packed.ArchivePath, skipPath: false);
+        RunUninstallSh(bash, root, dir, skipPath: true);
+
+        Assert.False(File.Exists(Path.Combine(dir.Prefix, "ndx")));
+        var zshrc = File.ReadAllText(Path.Combine(dir.Home, ".zshrc"));
+        Assert.Contains("# >>> ndx path >>>", zshrc);
+        Assert.Contains("# <<< ndx path <<<", zshrc);
+        Assert.Contains(ToBashPath(bash, dir.Prefix), zshrc);
+    }
+
+    [Fact]
+    public void Powershell_uninstall_script_removes_legacy_ndnx()
+    {
+        var root = FindRepoRoot();
+        var uninstall = Path.Combine(root, "uninstall.ps1");
+        using var dir = new TempDir();
+
+        var dest = Path.Combine(dir.Prefix, "ndx.exe");
+        File.WriteAllBytes(dest, "ndx"u8.ToArray());
+
+        var localApp = Path.Combine(dir.Root, "localapp");
+        var legacyDir = Path.Combine(localApp, "ndnx");
+        Directory.CreateDirectory(legacyDir);
+        var legacy = Path.Combine(legacyDir, "ndnx.exe");
+        File.WriteAllBytes(legacy, "legacy-ndnx"u8.ToArray());
+
+        var (exit, stdout, stderr) = RunPowershell(uninstall, dir, archive: null, skipPath: true);
+        Assert.True(exit == 0, $"uninstall.ps1 failed ({exit}).{Environment.NewLine}{stdout}{Environment.NewLine}{stderr}");
+        Assert.False(File.Exists(dest), stdout);
+        Assert.False(File.Exists(legacy), stdout);
+        Assert.False(Directory.Exists(legacyDir), stdout);
+        Assert.Contains("ndnx.exe", stdout, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Shell_uninstaller_removes_legacy_ndnx_binary_and_path_block()
+    {
+        var bash = FindBash();
+        Assert.True(bash is not null, "bash is required to verify uninstall.sh ndnx cleanup");
+
+        var root = FindRepoRoot();
+        using var dir = new TempDir();
+        var legacyDir = Path.Combine(dir.Home, ".local", "bin");
+        Directory.CreateDirectory(legacyDir);
+        File.WriteAllBytes(Path.Combine(legacyDir, "ndnx"), "legacy-ndnx"u8.ToArray());
+        File.WriteAllText(Path.Combine(dir.Home, ".zshrc"), """
+            # keep me
+            # >>> ndnx path >>>
+            export PATH="/old/ndnx:$PATH"
+            # <<< ndnx path <<<
+            """);
+
+        RunUninstallSh(bash, root, dir, skipPath: false);
+
+        Assert.False(File.Exists(Path.Combine(legacyDir, "ndnx")));
+        var zshrc = File.ReadAllText(Path.Combine(dir.Home, ".zshrc"));
+        Assert.Contains("# keep me", zshrc);
+        Assert.DoesNotContain("# >>> ndnx path >>>", zshrc);
+        Assert.DoesNotContain("# <<< ndnx path <<<", zshrc);
+        Assert.DoesNotContain("/old/ndnx", zshrc);
+    }
+
+    [Fact]
     public void Install_scripts_resolve_ci_channel_without_a_v_prefix()
     {
         var root = FindRepoRoot();
@@ -159,6 +295,73 @@ public class InstallScriptTests
         Assert.DoesNotContain("sleet push", ci);
         Assert.Contains("install.sh", yml);
         Assert.Contains("install.ps1", yml);
+        Assert.Contains("uninstall.sh", yml);
+        Assert.Contains("uninstall.ps1", yml);
+        Assert.Contains("uninstall.sh", ci);
+        Assert.Contains("uninstall.ps1", ci);
+    }
+
+    static (int ExitCode, string Stdout, string Stderr) RunPowershell(string script, TempDir dir, string? archive, bool skipPath)
+    {
+        var start = new ProcessStartInfo
+        {
+            FileName = OperatingSystem.IsWindows() ? "pwsh" : "pwsh",
+            WorkingDirectory = FindRepoRoot(),
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+        };
+        if (OperatingSystem.IsWindows() && GetFullPath("pwsh") is null)
+            start.FileName = "powershell";
+
+        start.ArgumentList.Add("-NoProfile");
+        start.ArgumentList.Add("-File");
+        start.ArgumentList.Add(script);
+        if (archive is not null)
+        {
+            start.ArgumentList.Add("--archive");
+            start.ArgumentList.Add(archive);
+        }
+        start.ArgumentList.Add("--prefix");
+        start.ArgumentList.Add(dir.Prefix);
+        start.ArgumentList.Add("--rid");
+        start.ArgumentList.Add("win-x64");
+        if (skipPath)
+            start.ArgumentList.Add("--skip-path");
+
+        start.Environment["HOME"] = dir.Home;
+        start.Environment["LOCALAPPDATA"] = Path.Combine(dir.Root, "localapp");
+
+        using var process = Process.Start(start) ?? throw new InvalidOperationException("failed to start PowerShell");
+        var stdout = process.StandardOutput.ReadToEnd();
+        var stderr = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+        return (process.ExitCode, stdout, stderr);
+    }
+
+    static void RunUninstallSh(string bash, string repoRoot, TempDir dir, bool skipPath)
+    {
+        var start = new ProcessStartInfo
+        {
+            FileName = bash,
+            WorkingDirectory = repoRoot,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+        };
+        start.ArgumentList.Add(ToBashPath(bash, Path.Combine(repoRoot, "uninstall.sh")));
+        start.Environment["HOME"] = ToBashPath(bash, dir.Home);
+        start.Environment["SHELL"] = "/bin/zsh";
+        start.Environment["NDX_PREFIX"] = ToBashPath(bash, dir.Prefix);
+        start.Environment["NDX_RID"] = "linux-x64";
+        start.Environment["NDX_SKIP_PATH"] = skipPath ? "1" : "0";
+
+        using var process = Process.Start(start) ?? throw new InvalidOperationException("failed to start bash");
+        var stdout = process.StandardOutput.ReadToEnd();
+        var stderr = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+        Assert.True(process.ExitCode == 0, $"uninstall.sh failed ({process.ExitCode}).{Environment.NewLine}{stdout}{Environment.NewLine}{stderr}");
+        Assert.Contains("removed", stdout, StringComparison.OrdinalIgnoreCase);
     }
 
     static void RunInstallSh(string bash, string repoRoot, TempDir dir, string archive, bool skipPath)

@@ -1,5 +1,5 @@
 # Builds Native AOT binaries for the six-RID matrix and attaches
-# archives + SHA256 checksums + install scripts to the GitHub Release.
+# archives + SHA256 checksums + install/uninstall scripts to the GitHub Release.
 # Native binaries only.
 
 name: publish
@@ -124,6 +124,8 @@ jobs:
             native/**/*.sha256
             install.sh
             install.ps1
+            uninstall.sh
+            uninstall.ps1
           if-no-files-found: error
 
       - name: 🚀 release assets
@@ -134,6 +136,6 @@ jobs:
           $assets = @(Get-ChildItem native -Recurse -File | Where-Object {
             $_.Extension -in '.zip', '.sha256' -or $_.Name.EndsWith('.tar.gz')
           })
-          $assets += Get-Item install.sh, install.ps1
-          if ($assets.Count -eq 0) { throw 'No native archives, checksums, or install scripts found to attach.' }
+          $assets += Get-Item install.sh, install.ps1, uninstall.sh, uninstall.ps1
+          if ($assets.Count -eq 0) { throw 'No native archives, checksums, or install/uninstall scripts found to attach.' }
           gh release upload "${{ github.event.release.tag_name }}" @($assets.FullName) --clobber
