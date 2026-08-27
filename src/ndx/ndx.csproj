@@ -4,19 +4,29 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <PublishAot>true</PublishAot>
-    <IsPackable>false</IsPackable>
     <InvariantGlobalization>true</InvariantGlobalization>
     <StackTraceSupport>true</StackTraceSupport>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <AssemblyName>ndx</AssemblyName>
     <PackageId>ndx</PackageId>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>ndx</ToolCommandName>
+    <Description>dnx for native tools packaged as NuGet packages.</Description>
+    <RollForward>LatestMajor</RollForward>
+    <RuntimeIdentifiers>win-x64;win-arm64;linux-x64;linux-arm64;osx-x64;osx-arm64;any</RuntimeIdentifiers>
     <_NdxWindows>false</_NdxWindows>
     <_NdxWindows Condition="$([MSBuild]::IsOSPlatform('Windows'))">true</_NdxWindows>
     <_NdxWindows Condition="$(RuntimeIdentifier.StartsWith('win'))">true</_NdxWindows>
     <_NdxWindows Condition="$(RuntimeIdentifier) != '' and !$(RuntimeIdentifier.StartsWith('win'))">false</_NdxWindows>
     <DefineConstants Condition="'$(_NdxWindows)' == 'true'">$(DefineConstants);NDX_WINDOWS</DefineConstants>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'any'">
+    <PublishAot>false</PublishAot>
+  </PropertyGroup>
   <ItemGroup>
     <EmbeddedResource Include="PortableRuntimeIdentifierGraph.json" LogicalName="PortableRuntimeIdentifierGraph.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Readme" Version="1.2.1" PrivateAssets="all" />
   </ItemGroup>
 </Project>

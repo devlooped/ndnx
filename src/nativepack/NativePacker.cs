@@ -5,7 +5,7 @@ using System.Security.Cryptography;
 namespace ndx;
 
 /// <summary>
-/// Turns a Native AOT publish directory into the archive + SHA256
+/// Turns a RID-specific Native AOT tool nupkg into the archive + SHA256
 /// attached to a GitHub Release (and consumed by the install scripts).
 /// </summary>
 public static class NativePacker
@@ -22,24 +22,18 @@ public static class NativePacker
             : $"ndx-{version}-{rid}.tar.gz";
 
     public static NativePackResult Pack(
-        string publishDirectory,
+        string nupkgPath,
         string rid,
         string outputDirectory,
         string version)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(publishDirectory);
+        ArgumentException.ThrowIfNullOrWhiteSpace(nupkgPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(rid);
         ArgumentException.ThrowIfNullOrWhiteSpace(outputDirectory);
         ArgumentException.ThrowIfNullOrWhiteSpace(version);
 
         var binaryName = BinaryFileName(rid);
-        var binaryPath = Path.Combine(publishDirectory, binaryName);
-        if (!File.Exists(binaryPath))
-        {
-            throw new FileNotFoundException(
-                $"Published native binary '{binaryName}' was not found in '{publishDirectory}'.",
-                binaryPath);
-        }
+        var payload = ReadNativeBinary(nupkgPath, binaryName);
 
         Directory.CreateDirectory(outputDirectory);
 
@@ -49,9 +43,9 @@ public static class NativePacker
             File.Delete(archivePath);
 
         if (IsWindowsRid(rid))
-            PackZip(binaryPath, binaryName, archivePath);
+            PackZip(payload, binaryName, archivePath);
         else
-            PackTarGz(binaryPath, binaryName, archivePath);
+            PackTarGz(payload, binaryName, archivePath);
 
         var sha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(archivePath)))
             .ToLowerInvariant();
@@ -61,18 +55,55 @@ public static class NativePacker
         return new NativePackResult(archivePath, sha256Path, sha256, binaryName);
     }
 
-    static void PackZip(string binaryPath, string binaryName, string archivePath)
+    static byte[] ReadNativeBinary(string nupkgPath, string binaryName)
     {
-        using var zip = ZipFile.Open(archivePath, ZipArchiveMode.Create);
-        zip.CreateEntryFromFile(binaryPath, binaryName, CompressionLevel.Optimal);
+        if (!File.Exists(nupkgPath))
+        {
+            throw new FileNotFoundException(
+                $"RID package '{nupkgPath}' was not found.",
+                nupkgPath);
+        }
+
+        using var zip = ZipFile.OpenRead(nupkgPath);
+        var matches = zip.Entries
+            .Where(entry =>
+                entry.Length > 0 &&
+                string.Equals(Path.GetFileName(entry.FullName), binaryName, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        if (matches.Length == 0)
+        {
+            throw new FileNotFoundException(
+                $"Native binary '{binaryName}' was not found in '{nupkgPath}'.",
+                binaryName);
+        }
+
+        if (matches.Length > 1)
+        {
+            throw new InvalidOperationException(
+                $"Multiple '{binaryName}' entries in '{nupkgPath}'.");
+        }
+
+        using var stream = matches[0].Open();
+        using var memory = new MemoryStream();
+        stream.CopyTo(memory);
+        return memory.ToArray();
     }
 
-    static void PackTarGz(string binaryPath, string binaryName, string archivePath)
+    static void PackZip(byte[] payload, string binaryName, string archivePath)
+    {
+        using var zip = ZipFile.Open(archivePath, ZipArchiveMode.Create);
+        var entry = zip.CreateEntry(binaryName, CompressionLevel.Optimal);
+        using var stream = entry.Open();
+        stream.Write(payload);
+    }
+
+    static void PackTarGz(byte[] payload, string binaryName, string archivePath)
     {
         using var file = File.Create(archivePath);
         using var gzip = new GZipStream(file, CompressionLevel.Optimal);
         using var tar = new TarWriter(gzip, TarEntryFormat.Pax);
-        using var data = new MemoryStream(File.ReadAllBytes(binaryPath));
+        using var data = new MemoryStream(payload);
         var entry = new PaxTarEntry(TarEntryType.RegularFile, binaryName)
         {
             DataStream = data,

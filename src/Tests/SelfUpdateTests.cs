@@ -149,10 +149,11 @@ public class SelfUpdateTests
 
         const string unixRid = "linux-x64";
         using var handler = new MapHandler();
-        var publish = Path.Combine(dir.Root, "publish-unix");
-        Directory.CreateDirectory(publish);
-        File.WriteAllBytes(Path.Combine(publish, "ndx"), "new-unix"u8.ToArray());
-        var packed = NativePacker.Pack(publish, unixRid, Path.Combine(dir.Root, "out-unix"), "0.3.0");
+        var packed = NativePacker.Pack(
+            RidNupkg.Write(Path.Combine(dir.Root, "nupkg-unix"), unixRid, "new-unix"u8.ToArray()),
+            unixRid,
+            Path.Combine(dir.Root, "out-unix"),
+            "0.3.0");
         var name = Path.GetFileName(packed.ArchivePath);
         handler.Map[SelfUpdate.AssetUrl(Repo, "v0.3.0", name)] =
             (HttpStatusCode.OK, File.ReadAllBytes(packed.ArchivePath), "application/octet-stream");
@@ -250,10 +251,11 @@ public class SelfUpdateTests
 
     static void AddRelease(MapHandler handler, TempDir dir, string version, byte[] payload, string? tag = null)
     {
-        var publish = Path.Combine(dir.Root, "publish-" + version);
-        Directory.CreateDirectory(publish);
-        File.WriteAllBytes(Path.Combine(publish, "ndx.exe"), payload);
-        var packed = NativePacker.Pack(publish, Rid, Path.Combine(dir.Root, "out-" + version), version);
+        var packed = NativePacker.Pack(
+            RidNupkg.Write(Path.Combine(dir.Root, "nupkg-" + version), Rid, payload),
+            Rid,
+            Path.Combine(dir.Root, "out-" + version),
+            version);
         var archive = File.ReadAllBytes(packed.ArchivePath);
         var sha = File.ReadAllBytes(packed.Sha256Path);
         var name = Path.GetFileName(packed.ArchivePath);
