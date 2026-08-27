@@ -1,28 +1,28 @@
 using System.Net;
 using System.Text;
-using ndnx;
+using ndx;
 
 namespace Tests;
 
 public class SelfUpdateTests
 {
-    const string Repo = "devlooped/ndnx";
+    const string Repo = "devlooped/ndx";
     const string Rid = "win-x64";
 
     [Theory]
-    [InlineData("0.2.0", "ndnx 0.2.0")]
-    [InlineData("v0.2.0", "ndnx 0.2.0")]
-    [InlineData("0.2.0+abcdef123", "ndnx 0.2.0 (abcdef123)")]
-    [InlineData("0.2.0+abcdef1234567890", "ndnx 0.2.0 (abcdef123)")]
-    [InlineData("v0.2.0+abcdef123.dirty", "ndnx 0.2.0 (abcdef123)")]
-    public void FormatVersion_renders_ndnx_version_and_short_sha(string informational, string expected)
+    [InlineData("0.2.0", "ndx 0.2.0")]
+    [InlineData("v0.2.0", "ndx 0.2.0")]
+    [InlineData("0.2.0+abcdef123", "ndx 0.2.0 (abcdef123)")]
+    [InlineData("0.2.0+abcdef1234567890", "ndx 0.2.0 (abcdef123)")]
+    [InlineData("v0.2.0+abcdef123.dirty", "ndx 0.2.0 (abcdef123)")]
+    public void FormatVersion_renders_ndx_version_and_short_sha(string informational, string expected)
         => Assert.Equal(expected, SelfUpdate.FormatVersion(informational));
 
     [Fact]
     public void FormatVersion_reads_assembly_informational_version()
     {
         var formatted = SelfUpdate.FormatVersion();
-        Assert.StartsWith("ndnx ", formatted);
+        Assert.StartsWith("ndx ", formatted);
         Assert.Contains(SelfUpdate.ReadCurrentVersion(), formatted);
     }
 
@@ -30,7 +30,7 @@ public class SelfUpdateTests
     public async Task Update_to_latest_replaces_the_binary_and_prints_the_target_version()
     {
         using var dir = new TempDir();
-        var current = Path.Combine(dir.Prefix, "ndnx.exe");
+        var current = Path.Combine(dir.Prefix, "ndx.exe");
         File.WriteAllBytes(current, "old-binary"u8.ToArray());
 
         using var handler = Feed(dir, latest: "0.2.0", payload: "new-binary"u8.ToArray());
@@ -49,7 +49,7 @@ public class SelfUpdateTests
     public async Task Update_skips_download_when_already_on_latest()
     {
         using var dir = new TempDir();
-        var current = Path.Combine(dir.Prefix, "ndnx.exe");
+        var current = Path.Combine(dir.Prefix, "ndx.exe");
         var payload = "same-binary"u8.ToArray();
         File.WriteAllBytes(current, payload);
 
@@ -69,7 +69,7 @@ public class SelfUpdateTests
     public async Task Update_to_ci_downloads_the_rolling_prerelease_tag()
     {
         using var dir = new TempDir();
-        var current = Path.Combine(dir.Prefix, "ndnx.exe");
+        var current = Path.Combine(dir.Prefix, "ndx.exe");
         File.WriteAllBytes(current, "old-binary"u8.ToArray());
 
         using var handler = new MapHandler();
@@ -90,7 +90,7 @@ public class SelfUpdateTests
     public async Task Update_to_ci_redownloads_even_when_already_labeled_ci()
     {
         using var dir = new TempDir();
-        var current = Path.Combine(dir.Prefix, "ndnx.exe");
+        var current = Path.Combine(dir.Prefix, "ndx.exe");
         File.WriteAllBytes(current, "stale-ci"u8.ToArray());
 
         using var handler = new MapHandler();
@@ -108,7 +108,7 @@ public class SelfUpdateTests
     public async Task Update_to_an_older_version_is_allowed()
     {
         using var dir = new TempDir();
-        var current = Path.Combine(dir.Prefix, "ndnx.exe");
+        var current = Path.Combine(dir.Prefix, "ndx.exe");
         File.WriteAllBytes(current, "newer-binary"u8.ToArray());
 
         using var handler = Feed(dir, latest: "0.2.0", payload: "older-binary"u8.ToArray(), extraVersion: "0.1.0");
@@ -126,7 +126,7 @@ public class SelfUpdateTests
     public async Task Update_to_a_missing_version_fails()
     {
         using var dir = new TempDir();
-        var current = Path.Combine(dir.Prefix, "ndnx.exe");
+        var current = Path.Combine(dir.Prefix, "ndx.exe");
         File.WriteAllBytes(current, "old-binary"u8.ToArray());
 
         using var handler = Feed(dir, latest: "0.2.0", payload: "new-binary"u8.ToArray());
@@ -144,14 +144,14 @@ public class SelfUpdateTests
     public async Task Update_extracts_a_unix_targz_archive()
     {
         using var dir = new TempDir();
-        var current = Path.Combine(dir.Prefix, "ndnx");
+        var current = Path.Combine(dir.Prefix, "ndx");
         File.WriteAllBytes(current, "old-unix"u8.ToArray());
 
         const string unixRid = "linux-x64";
         using var handler = new MapHandler();
         var publish = Path.Combine(dir.Root, "publish-unix");
         Directory.CreateDirectory(publish);
-        File.WriteAllBytes(Path.Combine(publish, "ndnx"), "new-unix"u8.ToArray());
+        File.WriteAllBytes(Path.Combine(publish, "ndx"), "new-unix"u8.ToArray());
         var packed = NativePacker.Pack(publish, unixRid, Path.Combine(dir.Root, "out-unix"), "0.3.0");
         var name = Path.GetFileName(packed.ArchivePath);
         handler.Map[SelfUpdate.AssetUrl(Repo, "v0.3.0", name)] =
@@ -159,7 +159,7 @@ public class SelfUpdateTests
         handler.Map[SelfUpdate.AssetUrl(Repo, "v0.3.0", name) + ".sha256"] =
             (HttpStatusCode.OK, File.ReadAllBytes(packed.Sha256Path), "text/plain");
 
-        var host = new NdnxHost
+        var host = new NdxHost
         {
             WorkingDirectory = dir.Root,
             StoreDirectory = dir.Store,
@@ -183,7 +183,7 @@ public class SelfUpdateTests
     public async Task Update_does_not_launch_a_child()
     {
         using var dir = new TempDir();
-        var current = Path.Combine(dir.Prefix, "ndnx.exe");
+        var current = Path.Combine(dir.Prefix, "ndx.exe");
         File.WriteAllBytes(current, "old-binary"u8.ToArray());
 
         using var handler = Feed(dir, latest: "0.2.0", payload: "new-binary"u8.ToArray());
@@ -200,7 +200,7 @@ public class SelfUpdateTests
     public async Task Sha256_mismatch_leaves_the_current_binary()
     {
         using var dir = new TempDir();
-        var current = Path.Combine(dir.Prefix, "ndnx.exe");
+        var current = Path.Combine(dir.Prefix, "ndx.exe");
         File.WriteAllBytes(current, "old-binary"u8.ToArray());
 
         using var handler = Feed(dir, latest: "0.2.0", payload: "new-binary"u8.ToArray());
@@ -216,7 +216,7 @@ public class SelfUpdateTests
         Assert.Contains("SHA256", host.Error.ToString());
     }
 
-    static NdnxHost NewHost(TempDir dir, string executable, string currentVersion, MapHandler handler, IProcessRunner? runner = null)
+    static NdxHost NewHost(TempDir dir, string executable, string currentVersion, MapHandler handler, IProcessRunner? runner = null)
         => new()
         {
             WorkingDirectory = dir.Root,
@@ -252,7 +252,7 @@ public class SelfUpdateTests
     {
         var publish = Path.Combine(dir.Root, "publish-" + version);
         Directory.CreateDirectory(publish);
-        File.WriteAllBytes(Path.Combine(publish, "ndnx.exe"), payload);
+        File.WriteAllBytes(Path.Combine(publish, "ndx.exe"), payload);
         var packed = NativePacker.Pack(publish, Rid, Path.Combine(dir.Root, "out-" + version), version);
         var archive = File.ReadAllBytes(packed.ArchivePath);
         var sha = File.ReadAllBytes(packed.Sha256Path);
@@ -292,7 +292,7 @@ public class SelfUpdateTests
 
     sealed class TempDir : IDisposable
     {
-        public string Root { get; } = Path.Combine(Path.GetTempPath(), "ndnx-update-tests", Guid.NewGuid().ToString("n"));
+        public string Root { get; } = Path.Combine(Path.GetTempPath(), "ndx-update-tests", Guid.NewGuid().ToString("n"));
         public string Prefix => Path.Combine(Root, "prefix");
         public string Store => Path.Combine(Root, "store");
 

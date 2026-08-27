@@ -1,9 +1,9 @@
 using System.Globalization;
 
-namespace ndnx;
+namespace ndx;
 
 /// <summary>
-/// Tiny git-config / <c>.netconfig</c> reader for the <c>[ndnx]</c> section.
+/// Tiny git-config / <c>.netconfig</c> reader for the <c>[ndx]</c> section.
 /// </summary>
 public static class NetConfig
 {
@@ -15,7 +15,7 @@ public static class NetConfig
 
         foreach (var path in Enumerate(workingDirectory, userProfile))
         {
-            if (TryReadNumber(path, "ndnx", "interval", out var seconds) && seconds > 0)
+            if (TryReadNumber(path, "ndx", "interval", out var seconds) && seconds > 0)
                 return TimeSpan.FromSeconds(seconds);
         }
 

@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using ndnx;
+using ndx;
 
 namespace Tests;
 
@@ -10,10 +10,10 @@ public class ToolInvokeTests : IClassFixture<HelloToolFeed>
     public ToolInvokeTests(HelloToolFeed feed) => this.feed = feed;
 
     [Fact]
-    public async Task Version_alone_prints_ndnx_version_and_does_not_launch()
+    public async Task Version_alone_prints_ndx_version_and_does_not_launch()
     {
         var runner = new RecordingProcessRunner();
-        var host = new NdnxHost
+        var host = new NdxHost
         {
             WorkingDirectory = feed.Root,
             StoreDirectory = NewStore(),
@@ -27,7 +27,7 @@ public class ToolInvokeTests : IClassFixture<HelloToolFeed>
 
         Assert.Equal(0, code);
         Assert.Equal(0, runner.Calls);
-        Assert.Equal("ndnx 0.2.0" + Environment.NewLine, host.Out.ToString());
+        Assert.Equal("ndx 0.2.0" + Environment.NewLine, host.Out.ToString());
         Assert.Equal("", host.Error.ToString());
     }
 
@@ -35,7 +35,7 @@ public class ToolInvokeTests : IClassFixture<HelloToolFeed>
     public async Task Version_alone_includes_the_short_sha_from_informational_version()
     {
         var runner = new RecordingProcessRunner();
-        var host = new NdnxHost
+        var host = new NdxHost
         {
             WorkingDirectory = feed.Root,
             StoreDirectory = NewStore(),
@@ -49,7 +49,7 @@ public class ToolInvokeTests : IClassFixture<HelloToolFeed>
 
         Assert.Equal(0, code);
         Assert.Equal(0, runner.Calls);
-        Assert.Equal("ndnx 0.2.0 (abcdef123)" + Environment.NewLine, host.Out.ToString());
+        Assert.Equal("ndx 0.2.0 (abcdef123)" + Environment.NewLine, host.Out.ToString());
     }
 
     [Fact]
@@ -113,10 +113,10 @@ public class ToolInvokeTests : IClassFixture<HelloToolFeed>
     }
 
     [Fact]
-    public void Real_entry_point_writes_fixture_stdout_on_ndnx_stdout()
+    public void Real_entry_point_writes_fixture_stdout_on_ndx_stdout()
     {
         var store = NewStore();
-        var result = LaunchNdnx(
+        var result = LaunchNdx(
             store,
             [HelloToolFeed.PackageId + "@" + HelloToolFeed.PackageVersion, "--yes", "--source", feed.FeedDirectory, "--", "0", "via-entry"]);
 
@@ -130,7 +130,7 @@ public class ToolInvokeTests : IClassFixture<HelloToolFeed>
     public void Real_entry_point_relays_nonzero_exit_and_stdout()
     {
         var store = NewStore();
-        var result = LaunchNdnx(
+        var result = LaunchNdx(
             store,
             [HelloToolFeed.PackageId + "@" + HelloToolFeed.PackageVersion, "--yes", "--source", feed.FeedDirectory, "--", "11"]);
 
@@ -174,7 +174,7 @@ public class ToolInvokeTests : IClassFixture<HelloToolFeed>
             StringComparison.OrdinalIgnoreCase);
         Assert.True(File.Exists(Path.Combine(wrapperDir, "tools", "any", "any", "DotnetToolSettings.xml")));
 
-        var result = LaunchNdnx(
+        var result = LaunchNdx(
             storeDir,
             [HelloToolFeed.AnyWrapperId + "@" + HelloToolFeed.PackageVersion, "--yes", "--source", feed.FeedDirectory, "--", "0", "from-any"]);
         Assert.Equal(0, result.ExitCode);
@@ -220,14 +220,14 @@ public class ToolInvokeTests : IClassFixture<HelloToolFeed>
             "via-multirid",
         };
 
-        var first = LaunchNdnx(store, args);
+        var first = LaunchNdx(store, args);
         Assert.Equal(0, first.ExitCode);
         Assert.Contains(HelloToolFeed.Phrase, first.Stdout);
         Assert.DoesNotContain("declares RID-specific packages", first.Stdout + first.Stderr);
         Assert.True(Cached(store, HelloToolFeed.RidImplId));
         var markerTime = File.GetLastWriteTimeUtc(Marker(store, HelloToolFeed.RidImplId));
 
-        var second = LaunchNdnx(store, args);
+        var second = LaunchNdx(store, args);
         Assert.Equal(0, second.ExitCode);
         Assert.Contains(HelloToolFeed.Phrase, second.Stdout);
         Assert.Equal(markerTime, File.GetLastWriteTimeUtc(Marker(store, HelloToolFeed.RidImplId)));
@@ -286,10 +286,10 @@ public class ToolInvokeTests : IClassFixture<HelloToolFeed>
         Assert.Contains("Unexpected HTTP", error.Message);
     }
 
-    NdnxHost NewHost(IProcessRunner runner, string? store = null)
+    NdxHost NewHost(IProcessRunner runner, string? store = null)
     {
         store ??= NewStore();
-        return new NdnxHost
+        return new NdxHost
         {
             WorkingDirectory = feed.Root,
             StoreDirectory = store,
@@ -355,7 +355,7 @@ public class ToolInvokeTests : IClassFixture<HelloToolFeed>
 
     static string NewStore()
     {
-        var store = Path.Combine(Path.GetTempPath(), "ndnx-test-store", Guid.NewGuid().ToString("n"));
+        var store = Path.Combine(Path.GetTempPath(), "ndx-test-store", Guid.NewGuid().ToString("n"));
         Directory.CreateDirectory(store);
         return store;
     }
@@ -374,10 +374,10 @@ public class ToolInvokeTests : IClassFixture<HelloToolFeed>
         return Path.Combine(store, packageId.ToLowerInvariant(), version, ToolPackageStore.ReadyMarker);
     }
 
-    static (int ExitCode, string Stdout, string Stderr) LaunchNdnx(string store, string[] args)
+    static (int ExitCode, string Stdout, string Stderr) LaunchNdx(string store, string[] args)
     {
-        var ndnxDll = Path.Combine(AppContext.BaseDirectory, "ndnx.dll");
-        Assert.True(File.Exists(ndnxDll), $"Expected shipped ndnx.dll at {ndnxDll}");
+        var ndxDll = Path.Combine(AppContext.BaseDirectory, "ndx.dll");
+        Assert.True(File.Exists(ndxDll), $"Expected shipped ndx.dll at {ndxDll}");
 
         var start = new ProcessStartInfo
         {
@@ -387,10 +387,10 @@ public class ToolInvokeTests : IClassFixture<HelloToolFeed>
             UseShellExecute = false,
         };
         start.ArgumentList.Add("exec");
-        start.ArgumentList.Add(ndnxDll);
+        start.ArgumentList.Add(ndxDll);
         foreach (var arg in args)
             start.ArgumentList.Add(arg);
-        start.Environment["NDNX_STORE"] = store;
+        start.Environment["NDX_STORE"] = store;
         return ProcessCapture.Run(start);
     }
 }

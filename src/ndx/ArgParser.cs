@@ -1,10 +1,10 @@
-namespace ndnx;
+namespace ndx;
 
 /// <summary>
 /// dnx.cmd-compatible argv split: first operand is PACKAGE[@VERSION], listed
-/// flags are consumed by ndnx, everything else (including tokens after --) is
+/// flags are consumed by ndx, everything else (including tokens after --) is
 /// forwarded to the child. <c>--update [VERSION]</c> is a standalone self-update.
-/// A lone <c>--version</c> prints the ndnx version.
+/// A lone <c>--version</c> prints the ndx version.
 /// </summary>
 public static class ArgParser
 {

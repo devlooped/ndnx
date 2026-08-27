@@ -1,7 +1,7 @@
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
-using ndnx;
+using ndx;
 
 namespace Tests;
 
@@ -195,7 +195,7 @@ public class V3PackageLayoutTests
               <metadata>
                 <id>hello-tool</id>
                 <version>1.0.0</version>
-                <authors>ndnx</authors>
+                <authors>ndx</authors>
                 <description>tiny</description>
               </metadata>
             </package>
@@ -222,7 +222,7 @@ public class V3PackageLayoutTests
     sealed class TempDir : IDisposable
     {
         public string Path { get; } = System.IO.Path.Combine(
-            System.IO.Path.GetTempPath(), "ndnx-v3-tests", Guid.NewGuid().ToString("n"));
+            System.IO.Path.GetTempPath(), "ndx-v3-tests", Guid.NewGuid().ToString("n"));
 
         public TempDir() => Directory.CreateDirectory(Path);
 

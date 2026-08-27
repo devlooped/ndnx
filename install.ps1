@@ -1,24 +1,24 @@
-# Install ndnx from GitHub Releases.
-#   irm https://github.com/devlooped/ndnx/releases/latest/download/install.ps1 | iex
-# Env / flags: NDNX_VERSION, NDNX_PREFIX, NDNX_ARCHIVE, NDNX_RID, NDNX_REPO, NDNX_SKIP_PATH
+# Install ndx from GitHub Releases.
+#   irm https://github.com/devlooped/ndx/releases/latest/download/install.ps1 | iex
+# Env / flags: NDX_VERSION, NDX_PREFIX, NDX_ARCHIVE, NDX_RID, NDX_REPO, NDX_SKIP_PATH
 # Also accepts --version --prefix --archive --rid --repo --skip-path
 
 $ErrorActionPreference = 'Stop'
 
-$Repo = if ($env:NDNX_REPO) { $env:NDNX_REPO } else { 'devlooped/ndnx' }
-$Version = $env:NDNX_VERSION
-$Prefix = $env:NDNX_PREFIX
-$Archive = $env:NDNX_ARCHIVE
-$Rid = $env:NDNX_RID
-$SkipPath = $env:NDNX_SKIP_PATH -eq '1'
+$Repo = if ($env:NDX_REPO) { $env:NDX_REPO } else { 'devlooped/ndx' }
+$Version = $env:NDX_VERSION
+$Prefix = $env:NDX_PREFIX
+$Archive = $env:NDX_ARCHIVE
+$Rid = $env:NDX_RID
+$SkipPath = $env:NDX_SKIP_PATH -eq '1'
 
-function Get-NdnxRuntimeIdentifier {
+function Get-NdxRuntimeIdentifier {
     $arch = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture
     $archName = switch ($arch) {
         'X64' { 'x64' }
         'Arm64' { 'arm64' }
         default {
-            throw "ndnx: unsupported architecture '$arch'"
+            throw "ndx: unsupported architecture '$arch'"
         }
     }
 
@@ -31,7 +31,7 @@ function Get-NdnxRuntimeIdentifier {
         if ($IsLinux) { return "linux-$archName" }
     }
 
-    throw "ndnx: unsupported OS"
+    throw "ndx: unsupported OS"
 }
 
 function Send-EnvironmentChange {
@@ -59,7 +59,7 @@ public static extern IntPtr SendMessageTimeout(
         [ref]$result)
 }
 
-function Add-NdnxToUserPath([string]$dir) {
+function Add-NdxToUserPath([string]$dir) {
     $parts = [Environment]::GetEnvironmentVariable('Path', 'User')
     if (-not $parts) { $parts = '' }
     $entries = $parts.Split([char]';', [StringSplitOptions]::RemoveEmptyEntries)
@@ -82,27 +82,27 @@ for ($i = 0; $i -lt $args.Count; $i++) {
         '^--rid$|^-Rid$' { $Rid = $args[++$i]; continue }
         '^--repo$|^-Repo$' { $Repo = $args[++$i]; continue }
         '^--skip-path$|^-SkipPath$' { $SkipPath = $true; continue }
-        default { throw "ndnx: unrecognized argument '$($args[$i])'" }
+        default { throw "ndx: unrecognized argument '$($args[$i])'" }
     }
 }
 
 if (-not $Rid) {
-    $Rid = Get-NdnxRuntimeIdentifier
+    $Rid = Get-NdxRuntimeIdentifier
 }
 
 $windows = $Rid.StartsWith('win', [StringComparison]::OrdinalIgnoreCase)
-$binary = if ($windows) { 'ndnx.exe' } else { 'ndnx' }
+$binary = if ($windows) { 'ndx.exe' } else { 'ndx' }
 $ext = if ($windows) { 'zip' } else { 'tar.gz' }
 
 if (-not $Prefix) {
     $Prefix = if ($windows) {
-        Join-Path $env:LOCALAPPDATA 'ndnx'
+        Join-Path $env:LOCALAPPDATA 'ndx'
     } else {
         Join-Path $HOME '.local/bin'
     }
 }
 
-$tmp = Join-Path ([IO.Path]::GetTempPath()) ("ndnx-install-" + [guid]::NewGuid().ToString('n'))
+$tmp = Join-Path ([IO.Path]::GetTempPath()) ("ndx-install-" + [guid]::NewGuid().ToString('n'))
 New-Item -ItemType Directory -Path $tmp | Out-Null
 try {
     if (-not $Archive) {
@@ -121,11 +121,11 @@ try {
             $release = Invoke-RestMethod -Headers @{ Accept = 'application/vnd.github+json' } `
                 -Uri "https://api.github.com/repos/$Repo/releases/latest"
             $tag = $release.tag_name
-            if (-not $tag) { throw "ndnx: could not resolve latest release of $Repo" }
+            if (-not $tag) { throw "ndx: could not resolve latest release of $Repo" }
             $resolved = $tag.TrimStart('v')
         }
 
-        $name = "ndnx-$resolved-$Rid.$ext"
+        $name = "ndx-$resolved-$Rid.$ext"
         $base = "https://github.com/$Repo/releases/download/$tag"
         $Archive = Join-Path $tmp $name
         Invoke-WebRequest -Uri "$base/$name" -OutFile $Archive
@@ -136,7 +136,7 @@ try {
         $expected = ((Get-Content -Raw "$Archive.sha256").Trim() -split '\s+')[0].ToLowerInvariant()
         $actual = (Get-FileHash -Algorithm SHA256 -Path $Archive).Hash.ToLowerInvariant()
         if ($actual -ne $expected) {
-            throw "ndnx: SHA256 mismatch for $(Split-Path $Archive -Leaf)`n  expected: $expected`n  actual:   $actual"
+            throw "ndx: SHA256 mismatch for $(Split-Path $Archive -Leaf)`n  expected: $expected`n  actual:   $actual"
         }
     }
 
@@ -150,7 +150,7 @@ try {
 
     $source = Join-Path $extract $binary
     if (-not (Test-Path $source)) {
-        throw "ndnx: archive did not contain $binary"
+        throw "ndx: archive did not contain $binary"
     }
 
     New-Item -ItemType Directory -Force -Path $Prefix | Out-Null
@@ -159,7 +159,7 @@ try {
     Write-Host "installed $dest"
 
     if (-not $SkipPath) {
-        Add-NdnxToUserPath $Prefix
+        Add-NdxToUserPath $Prefix
     }
 }
 finally {

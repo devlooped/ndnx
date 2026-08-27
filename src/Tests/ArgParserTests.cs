@@ -1,4 +1,4 @@
-using ndnx;
+using ndx;
 
 namespace Tests;
 
@@ -19,7 +19,7 @@ public class ArgParserTests
     }
 
     [Fact]
-    public void Tokens_after_terminator_that_look_like_ndnx_flags_still_forward()
+    public void Tokens_after_terminator_that_look_like_ndx_flags_still_forward()
     {
         var parsed = ArgParser.Parse(
             "pkg", "--", "--yes", "--source", "https://feed.example", "-v", "detailed");
@@ -107,7 +107,7 @@ public class ArgParserTests
     [Theory]
     [InlineData("--version")]
     [InlineData("--VERSION")]
-    public void Version_alone_prints_the_ndnx_version(string arg)
+    public void Version_alone_prints_the_ndx_version(string arg)
     {
         var parsed = ArgParser.Parse(arg);
 

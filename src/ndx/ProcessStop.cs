@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
-namespace ndnx;
+namespace ndx;
 
 /// <summary>
 /// Gracefully stops a child we started: SIGINT / Ctrl+C, then Windows
@@ -34,7 +34,7 @@ public static class ProcessStop
     [SupportedOSPlatform("windows")]
     static void SignalWindows(Process process)
     {
-#if NDNX_WINDOWS
+#if NDX_WINDOWS
         if (TryCloseGui(process))
             return;
 
@@ -74,7 +74,7 @@ public static class ProcessStop
         }
     }
 
-#if NDNX_WINDOWS
+#if NDX_WINDOWS
     [SupportedOSPlatform("windows")]
     static bool TryCloseGui(Process process)
     {

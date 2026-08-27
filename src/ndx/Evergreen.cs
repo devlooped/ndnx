@@ -1,4 +1,4 @@
-namespace ndnx;
+namespace ndx;
 
 /// <summary>
 /// Runs a floating-version tool and restarts it when a newer matching version
@@ -8,7 +8,7 @@ public static class Evergreen
 {
     public static async Task<int> RunAsync(
         Invocation invocation,
-        NdnxHost host,
+        NdxHost host,
         ToolPackageStore store,
         IReadOnlyList<string> sources,
         ToolCommand command,

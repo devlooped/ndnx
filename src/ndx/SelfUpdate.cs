@@ -6,14 +6,14 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 
-namespace ndnx;
+namespace ndx;
 
 /// <summary>
-/// Replaces the running ndnx binary with a GitHub Release asset.
+/// Replaces the running ndx binary with a GitHub Release asset.
 /// </summary>
 public static class SelfUpdate
 {
-    public const string DefaultRepository = "devlooped/ndnx";
+    public const string DefaultRepository = "devlooped/ndx";
     public const string CiChannel = "ci";
 
     public static bool IsCiChannel(string? value)
@@ -24,13 +24,13 @@ public static class SelfUpdate
 
     public static async Task<int> RunAsync(
         Invocation invocation,
-        NdnxHost host,
+        NdxHost host,
         HttpClient http,
         CancellationToken cancellationToken = default)
     {
         var currentVersion = host.CurrentVersion ?? ReadCurrentVersion();
         var repo = host.UpdateRepository
-            ?? Environment.GetEnvironmentVariable("NDNX_REPO")
+            ?? Environment.GetEnvironmentVariable("NDX_REPO")
             ?? DefaultRepository;
         var rid = host.RuntimeIdentifier ?? DetectRuntimeIdentifier();
         var executable = host.ExecutablePath ?? ResolveExecutablePath();
@@ -57,7 +57,7 @@ public static class SelfUpdate
 
             if (PackageVersion.TryParse(currentVersion, out var current) && current.Equals(targetVersion))
             {
-                host.Out.WriteLine($"ndnx is already {targetVersion}");
+                host.Out.WriteLine($"ndx is already {targetVersion}");
                 return 0;
             }
 
@@ -78,7 +78,7 @@ public static class SelfUpdate
         var archiveUrl = AssetUrl(repo, tag, archiveName);
         var shaUrl = archiveUrl + ".sha256";
 
-        var tmp = Path.Combine(Path.GetTempPath(), "ndnx-update-" + Guid.NewGuid().ToString("n"));
+        var tmp = Path.Combine(Path.GetTempPath(), "ndx-update-" + Guid.NewGuid().ToString("n"));
         Directory.CreateDirectory(tmp);
         try
         {
@@ -107,7 +107,7 @@ public static class SelfUpdate
         => NormalizeVersion(ReadInformationalVersion());
 
     /// <summary>
-    /// <c>ndnx {version} ({short_sha})</c> when a commit is present, otherwise <c>ndnx {version}</c>.
+    /// <c>ndx {version} ({short_sha})</c> when a commit is present, otherwise <c>ndx {version}</c>.
     /// </summary>
     public static string FormatVersion(string? informational = null)
     {
@@ -115,7 +115,7 @@ public static class SelfUpdate
         var plus = value.IndexOf('+');
         var version = NormalizeVersion(plus >= 0 ? value[..plus] : value);
         if (plus < 0)
-            return $"ndnx {version}";
+            return $"ndx {version}";
 
         var sha = value.AsSpan(plus + 1);
         var separator = sha.IndexOfAny(".-+");
@@ -124,9 +124,9 @@ public static class SelfUpdate
         if (sha.Length > 9)
             sha = sha[..9];
         if (sha.IsEmpty)
-            return $"ndnx {version}";
+            return $"ndx {version}";
 
-        return $"ndnx {version} ({sha})";
+        return $"ndx {version} ({sha})";
     }
 
     static string ReadInformationalVersion()
@@ -139,12 +139,12 @@ public static class SelfUpdate
     {
         var process = Environment.ProcessPath;
         if (process is not null &&
-            Path.GetFileNameWithoutExtension(process).Equals("ndnx", StringComparison.OrdinalIgnoreCase))
+            Path.GetFileNameWithoutExtension(process).Equals("ndx", StringComparison.OrdinalIgnoreCase))
         {
             return process;
         }
 
-        return Path.Combine(AppContext.BaseDirectory, OperatingSystem.IsWindows() ? "ndnx.exe" : "ndnx");
+        return Path.Combine(AppContext.BaseDirectory, OperatingSystem.IsWindows() ? "ndx.exe" : "ndx");
     }
 
     public static string DetectRuntimeIdentifier()
@@ -154,7 +154,7 @@ public static class SelfUpdate
             Architecture.X64 => "x64",
             Architecture.Arm64 => "arm64",
             _ => throw new InvalidOperationException(
-                $"ndnx: unsupported architecture '{RuntimeInformation.OSArchitecture}'."),
+                $"ndx: unsupported architecture '{RuntimeInformation.OSArchitecture}'."),
         };
 
         if (OperatingSystem.IsWindows())
@@ -164,7 +164,7 @@ public static class SelfUpdate
         if (OperatingSystem.IsLinux())
             return $"linux-{arch}";
 
-        throw new InvalidOperationException("ndnx: unsupported OS.");
+        throw new InvalidOperationException("ndx: unsupported OS.");
     }
 
     public static string LatestReleaseUrl(string repo)
@@ -175,11 +175,11 @@ public static class SelfUpdate
 
     public static string ArchiveFileName(string rid, string version)
         => IsWindowsRid(rid)
-            ? $"ndnx-{version}-{rid}.zip"
-            : $"ndnx-{version}-{rid}.tar.gz";
+            ? $"ndx-{version}-{rid}.zip"
+            : $"ndx-{version}-{rid}.tar.gz";
 
     public static string BinaryFileName(string rid)
-        => IsWindowsRid(rid) ? "ndnx.exe" : "ndnx";
+        => IsWindowsRid(rid) ? "ndx.exe" : "ndx";
 
     static bool IsWindowsRid(string rid)
         => rid.StartsWith("win", StringComparison.OrdinalIgnoreCase);
@@ -342,7 +342,7 @@ public static class SelfUpdate
     static void EnsureGitHubHeaders(HttpClient http)
     {
         if (http.DefaultRequestHeaders.UserAgent.Count == 0)
-            http.DefaultRequestHeaders.UserAgent.ParseAdd("ndnx");
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("ndx");
         if (http.DefaultRequestHeaders.Accept.Count == 0)
             http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
     }

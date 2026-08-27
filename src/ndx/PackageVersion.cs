@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 
-namespace ndnx;
+namespace ndx;
 
 /// <summary>
 /// NuGet-compatible enough package version (major.minor.patch[-release][+metadata]).

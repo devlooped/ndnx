@@ -1,7 +1,7 @@
-namespace ndnx;
+namespace ndx;
 
 /// <summary>
-/// Result of splitting argv into ndnx options versus child arguments.
+/// Result of splitting argv into ndx options versus child arguments.
 /// </summary>
 public sealed record Invocation
 {

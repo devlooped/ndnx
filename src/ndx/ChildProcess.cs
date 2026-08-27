@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace ndnx;
+namespace ndx;
 
 public interface IChildProcess : IAsyncDisposable
 {

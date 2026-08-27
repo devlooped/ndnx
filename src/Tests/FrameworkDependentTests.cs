@@ -1,5 +1,5 @@
 using System.Runtime.InteropServices;
-using ndnx;
+using ndx;
 
 namespace Tests;
 
@@ -216,7 +216,7 @@ public class FrameworkDependentTests
               <metadata>
                 <id>hello-tool</id>
                 <version>1.0.0</version>
-                <authors>ndnx</authors>
+                <authors>ndx</authors>
                 <description>fdd fixture</description>
               </metadata>
             </package>
@@ -227,7 +227,7 @@ public class FrameworkDependentTests
         ZipFileFromDirectory(staging, Path.Combine(feedDir, "hello-tool.1.0.0.nupkg"));
 
         var runner = new RecordingProcessRunner();
-        var host = new NdnxHost
+        var host = new NdxHost
         {
             WorkingDirectory = root.Path,
             StoreDirectory = Path.Combine(root.Path, "app-store"),
@@ -310,7 +310,7 @@ public class FrameworkDependentTests
     sealed class TempDir : IDisposable
     {
         public string Path { get; } = System.IO.Path.Combine(
-            System.IO.Path.GetTempPath(), "ndnx-fx-tests", Guid.NewGuid().ToString("n"));
+            System.IO.Path.GetTempPath(), "ndx-fx-tests", Guid.NewGuid().ToString("n"));
 
         public TempDir() => Directory.CreateDirectory(Path);
 

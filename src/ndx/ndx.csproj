@@ -8,12 +8,13 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <StackTraceSupport>true</StackTraceSupport>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
-    <AssemblyName>ndnx</AssemblyName>
-    <_NdnxWindows>false</_NdnxWindows>
-    <_NdnxWindows Condition="$([MSBuild]::IsOSPlatform('Windows'))">true</_NdnxWindows>
-    <_NdnxWindows Condition="$(RuntimeIdentifier.StartsWith('win'))">true</_NdnxWindows>
-    <_NdnxWindows Condition="$(RuntimeIdentifier) != '' and !$(RuntimeIdentifier.StartsWith('win'))">false</_NdnxWindows>
-    <DefineConstants Condition="'$(_NdnxWindows)' == 'true'">$(DefineConstants);NDNX_WINDOWS</DefineConstants>
+    <AssemblyName>ndx</AssemblyName>
+    <PackageId>ndx</PackageId>
+    <_NdxWindows>false</_NdxWindows>
+    <_NdxWindows Condition="$([MSBuild]::IsOSPlatform('Windows'))">true</_NdxWindows>
+    <_NdxWindows Condition="$(RuntimeIdentifier.StartsWith('win'))">true</_NdxWindows>
+    <_NdxWindows Condition="$(RuntimeIdentifier) != '' and !$(RuntimeIdentifier.StartsWith('win'))">false</_NdxWindows>
+    <DefineConstants Condition="'$(_NdxWindows)' == 'true'">$(DefineConstants);NDX_WINDOWS</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <EmbeddedResource Include="PortableRuntimeIdentifierGraph.json" LogicalName="PortableRuntimeIdentifierGraph.json" />

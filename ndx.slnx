@@ -1,5 +1,5 @@
 <Solution>
-  <Project Path="src/ndnx/ndnx.csproj" />
+  <Project Path="src/ndx/ndx.csproj" />
   <Project Path="src/nativepack/nativepack.csproj" />
   <Project Path="src/Tests/Tests.csproj" />
 </Solution>

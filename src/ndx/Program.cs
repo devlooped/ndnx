@@ -1,4 +1,4 @@
-namespace ndnx;
+namespace ndx;
 
 public static class Program
 {

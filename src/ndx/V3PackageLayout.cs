@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 
-namespace ndnx;
+namespace ndx;
 
 /// <summary>
 /// NuGet v3 global-packages layout: <c>{id}/{version}/{id}.{version}.nupkg</c>,

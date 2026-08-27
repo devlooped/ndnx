@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using ndnx;
+using ndx;
 
 namespace Tests;
 
@@ -42,7 +42,7 @@ public class InstallScriptTests
         using var dir = new TempDir();
 
         var payload = "installed-by-script"u8.ToArray();
-        File.WriteAllBytes(Path.Combine(dir.Publish, "ndnx.exe"), payload);
+        File.WriteAllBytes(Path.Combine(dir.Publish, "ndx.exe"), payload);
         var packed = NativePacker.Pack(dir.Publish, "win-x64", dir.Output, "1.0.0");
 
         var start = new ProcessStartInfo
@@ -74,7 +74,7 @@ public class InstallScriptTests
         process.WaitForExit();
         Assert.True(process.ExitCode == 0, $"install.ps1 failed ({process.ExitCode}).{Environment.NewLine}{stdout}{Environment.NewLine}{stderr}");
 
-        var dest = Path.Combine(dir.Prefix, "ndnx.exe");
+        var dest = Path.Combine(dir.Prefix, "ndx.exe");
         Assert.True(File.Exists(dest), stdout);
         Assert.Equal(payload, File.ReadAllBytes(dest));
         Assert.Contains("installed", stdout, StringComparison.OrdinalIgnoreCase);
@@ -88,7 +88,7 @@ public class InstallScriptTests
         Assert.Contains("SendMessageTimeout", ps);
         Assert.Contains("'Environment'", ps);
         Assert.Contains("0x1a", ps);
-        Assert.Contains("Add-NdnxToUserPath", ps);
+        Assert.Contains("Add-NdxToUserPath", ps);
     }
 
     [Fact]
@@ -99,18 +99,18 @@ public class InstallScriptTests
 
         var root = FindRepoRoot();
         using var dir = new TempDir();
-        File.WriteAllBytes(Path.Combine(dir.Publish, "ndnx"), "unix-ndnx"u8.ToArray());
+        File.WriteAllBytes(Path.Combine(dir.Publish, "ndx"), "unix-ndx"u8.ToArray());
         var packed = NativePacker.Pack(dir.Publish, "linux-x64", dir.Output, "1.0.0");
 
         RunInstallSh(bash, root, dir, packed.ArchivePath, skipPath: false);
         RunInstallSh(bash, root, dir, packed.ArchivePath, skipPath: false);
 
         var zshrc = File.ReadAllText(Path.Combine(dir.Home, ".zshrc"));
-        Assert.Contains("# >>> ndnx path >>>", zshrc);
-        Assert.Contains("# <<< ndnx path <<<", zshrc);
+        Assert.Contains("# >>> ndx path >>>", zshrc);
+        Assert.Contains("# <<< ndx path <<<", zshrc);
         Assert.Contains(ToBashPath(bash, dir.Prefix), zshrc);
-        Assert.Equal(1, CountOccurrences(zshrc, "# >>> ndnx path >>>"));
-        Assert.True(File.Exists(Path.Combine(dir.Prefix, "ndnx")));
+        Assert.Equal(1, CountOccurrences(zshrc, "# >>> ndx path >>>"));
+        Assert.True(File.Exists(Path.Combine(dir.Prefix, "ndx")));
     }
 
     [Fact]
@@ -121,13 +121,13 @@ public class InstallScriptTests
 
         var root = FindRepoRoot();
         using var dir = new TempDir();
-        File.WriteAllBytes(Path.Combine(dir.Publish, "ndnx"), "unix-ndnx"u8.ToArray());
+        File.WriteAllBytes(Path.Combine(dir.Publish, "ndx"), "unix-ndx"u8.ToArray());
         var packed = NativePacker.Pack(dir.Publish, "linux-x64", dir.Output, "1.0.0");
 
         RunInstallSh(bash, root, dir, packed.ArchivePath, skipPath: true);
 
         Assert.False(File.Exists(Path.Combine(dir.Home, ".zshrc")));
-        Assert.True(File.Exists(Path.Combine(dir.Prefix, "ndnx")));
+        Assert.True(File.Exists(Path.Combine(dir.Prefix, "ndx")));
     }
 
     [Fact]
@@ -174,10 +174,10 @@ public class InstallScriptTests
         start.ArgumentList.Add(ToBashPath(bash, Path.Combine(repoRoot, "install.sh")));
         start.Environment["HOME"] = ToBashPath(bash, dir.Home);
         start.Environment["SHELL"] = "/bin/zsh";
-        start.Environment["NDNX_ARCHIVE"] = ToBashPath(bash, archive);
-        start.Environment["NDNX_PREFIX"] = ToBashPath(bash, dir.Prefix);
-        start.Environment["NDNX_RID"] = "linux-x64";
-        start.Environment["NDNX_SKIP_PATH"] = skipPath ? "1" : "0";
+        start.Environment["NDX_ARCHIVE"] = ToBashPath(bash, archive);
+        start.Environment["NDX_PREFIX"] = ToBashPath(bash, dir.Prefix);
+        start.Environment["NDX_RID"] = "linux-x64";
+        start.Environment["NDX_SKIP_PATH"] = skipPath ? "1" : "0";
 
         using var process = Process.Start(start) ?? throw new InvalidOperationException("failed to start bash");
         var stdout = process.StandardOutput.ReadToEnd();
@@ -243,7 +243,7 @@ public class InstallScriptTests
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir is not null)
         {
-            if (File.Exists(Path.Combine(dir.FullName, "ndnx.slnx")))
+            if (File.Exists(Path.Combine(dir.FullName, "ndx.slnx")))
                 return dir.FullName;
             dir = dir.Parent;
         }
@@ -253,7 +253,7 @@ public class InstallScriptTests
 
     sealed class TempDir : IDisposable
     {
-        public string Root { get; } = Path.Combine(Path.GetTempPath(), "ndnx-install-tests", Guid.NewGuid().ToString("n"));
+        public string Root { get; } = Path.Combine(Path.GetTempPath(), "ndx-install-tests", Guid.NewGuid().ToString("n"));
         public string Publish => Path.Combine(Root, "publish");
         public string Output => Path.Combine(Root, "out");
         public string Prefix => Path.Combine(Root, "prefix");

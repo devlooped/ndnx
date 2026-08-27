@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using ndnx;
+using ndx;
 
 namespace Tests;
 
@@ -43,7 +43,7 @@ public class ProcessStopTests
 
     static ChildProcess StartLinger(bool ignoreCancel)
     {
-        var dir = Path.Combine(Path.GetTempPath(), "ndnx-linger", Guid.NewGuid().ToString("n"));
+        var dir = Path.Combine(Path.GetTempPath(), "ndx-linger", Guid.NewGuid().ToString("n"));
         Directory.CreateDirectory(dir);
         var file = Path.Combine(dir, "linger.cs");
         File.WriteAllText(file, ignoreCancel
@@ -72,7 +72,7 @@ public class ProcessStopTests
 
     static ChildProcess StartGuiLinger()
     {
-        var dir = Path.Combine(Path.GetTempPath(), "ndnx-linger-gui", Guid.NewGuid().ToString("n"));
+        var dir = Path.Combine(Path.GetTempPath(), "ndx-linger-gui", Guid.NewGuid().ToString("n"));
         Directory.CreateDirectory(dir);
         var file = Path.Combine(dir, "linger-gui.cs");
         File.WriteAllText(file,
@@ -87,10 +87,10 @@ public class ProcessStopTests
                     var wndClass = new WndClass
                     {
                         lpfnWndProc = WndProc,
-                        lpszClassName = "ndnxLingerGui",
+                        lpszClassName = "ndxLingerGui",
                     };
                     RegisterClass(ref wndClass);
-                    var hwnd = CreateWindowEx(0, "ndnxLingerGui", "ndnx-linger", 0x00CF0000, 0, 0, 80, 80, 0, 0, 0, 0);
+                    var hwnd = CreateWindowEx(0, "ndxLingerGui", "ndx-linger", 0x00CF0000, 0, 0, 80, 80, 0, 0, 0, 0);
                     ShowWindow(hwnd, 0);
                     Console.WriteLine("ready");
                     while (GetMessage(out var msg, 0, 0, 0) > 0)

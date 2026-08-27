@@ -31,7 +31,7 @@ public sealed class HelloToolFeed : IDisposable
 
     public HelloToolFeed()
     {
-        Root = Path.Combine(Path.GetTempPath(), "ndnx-hello-tool-feed");
+        Root = Path.Combine(Path.GetTempPath(), "ndx-hello-tool-feed");
         FeedDirectory = Path.Combine(Root, "feed");
         lock (Gate)
             Build();
@@ -88,8 +88,8 @@ public sealed class HelloToolFeed : IDisposable
                 <ToolCommandName>hello-tool</ToolCommandName>
                 <PackageId>hello-tool</PackageId>
                 <Version>1.0.0</Version>
-                <Authors>ndnx</Authors>
-                <Description>ndnx test fixture</Description>
+                <Authors>ndx</Authors>
+                <Description>ndx test fixture</Description>
                 <PackageOutputPath>../feed</PackageOutputPath>
               </PropertyGroup>
             </Project>
@@ -144,7 +144,7 @@ public sealed class HelloToolFeed : IDisposable
               <metadata>
                 <id>{ExePackageId}</id>
                 <version>{PackageVersion}</version>
-                <authors>ndnx</authors>
+                <authors>ndx</authors>
                 <description>executable fixture</description>
                 <packageTypes>
                   <packageType name="DotnetTool" />
@@ -285,7 +285,7 @@ public sealed class HelloToolFeed : IDisposable
               <metadata>
                 <id>{packageId}</id>
                 <version>{PackageVersion}</version>
-                <authors>ndnx</authors>
+                <authors>ndx</authors>
                 <description>{packageId} fixture</description>
                 <packageTypes>
                   <packageType name="{packageType}" />

@@ -27,7 +27,7 @@ public class PublishWorkflowTests
         Assert.Contains("--clobber", yml);
         Assert.Contains("select(.tag_name == \"ci\")", yml);
         Assert.Contains("git/refs/tags/ci", yml);
-        Assert.Contains("--target $env:NDNX_SHA", yml);
+        Assert.Contains("--target $env:NDX_SHA", yml);
         Assert.Contains("Expected archives on the ci release", yml);
         Assert.Contains("Get-ChildItem native -Recurse -File", yml);
         Assert.Contains("cancel-in-progress: false", yml);
@@ -112,7 +112,7 @@ public class PublishWorkflowTests
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir is not null)
         {
-            if (File.Exists(Path.Combine(dir.FullName, "ndnx.slnx")))
+            if (File.Exists(Path.Combine(dir.FullName, "ndx.slnx")))
                 return dir.FullName;
             dir = dir.Parent;
         }

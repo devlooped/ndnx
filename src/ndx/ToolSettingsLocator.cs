@@ -1,4 +1,4 @@
-namespace ndnx;
+namespace ndx;
 
 /// <summary>
 /// Picks <c>DotnetToolSettings.xml</c> inside an extracted tool package.

@@ -24,7 +24,7 @@ env:
   VersionLabel: ${{ github.event.workflow_run.head_sha || github.sha }}
   GH_TOKEN: ${{ secrets.GH_TOKEN }}
   MSBUILDTERMINALLOGGER: auto
-  NDNX_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+  NDX_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
 
 jobs:
   native-aot:
@@ -53,7 +53,7 @@ jobs:
         run: |
           $out = "artifacts/${{ matrix.rid }}"
           New-Item -ItemType Directory -Force -Path $out | Out-Null
-          dotnet publish src/ndnx/ndnx.csproj -c $env:Configuration -r ${{ matrix.rid }} --self-contained -p:PublishAot=true -o $out -bl:"publish-${{ matrix.rid }}.binlog"
+          dotnet publish src/ndx/ndx.csproj -c $env:Configuration -r ${{ matrix.rid }} --self-contained -p:PublishAot=true -o $out -bl:"publish-${{ matrix.rid }}.binlog"
 
       - name: 📦 pack
         shell: pwsh
@@ -65,11 +65,11 @@ jobs:
         with:
           name: native-aot-${{ matrix.rid }}
           path: |
-            artifacts/${{ matrix.rid }}/ndnx
-            artifacts/${{ matrix.rid }}/ndnx.exe
-            artifacts/ndnx-*.zip
-            artifacts/ndnx-*.tar.gz
-            artifacts/ndnx-*.sha256
+            artifacts/${{ matrix.rid }}/ndx
+            artifacts/${{ matrix.rid }}/ndx.exe
+            artifacts/ndx-*.zip
+            artifacts/ndx-*.tar.gz
+            artifacts/ndx-*.sha256
           retention-days: 7
           if-no-files-found: error
 
@@ -131,11 +131,11 @@ jobs:
           Delete-CiRelease
 
           $notes = @"
-          Rolling native build from ``$env:NDNX_SHA``. Not a release.
+          Rolling native build from ``$env:NDX_SHA``. Not a release.
 
-          Install: ``curl -fsSL https://github.com/$env:GITHUB_REPOSITORY/releases/download/ci/install.sh | NDNX_VERSION=ci sh``
+          Install: ``curl -fsSL https://github.com/$env:GITHUB_REPOSITORY/releases/download/ci/install.sh | NDX_VERSION=ci sh``
 
-          Update: ``ndnx --update ci``
+          Update: ``ndx --update ci``
           "@
 
           # Create the tag/release with no files. Passing assets to `gh release create`
@@ -143,7 +143,7 @@ jobs:
           # publish.yml actually attaches archives.
           $created = $false
           for ($attempt = 1; $attempt -le 8; $attempt++) {
-            gh release create ci --prerelease --latest=false --title CI --target $env:NDNX_SHA --notes $notes
+            gh release create ci --prerelease --latest=false --title CI --target $env:NDX_SHA --notes $notes
             if ($LASTEXITCODE -eq 0) { $created = $true; break }
             Write-Host "ci tag still present (attempt $attempt); retrying..."
             Start-Sleep -Seconds ($attempt * 3)

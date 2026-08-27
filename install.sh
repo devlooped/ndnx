@@ -1,14 +1,14 @@
 #!/bin/sh
-# Install ndnx from GitHub Releases.
-#   curl -fsSL https://github.com/devlooped/ndnx/releases/latest/download/install.sh | sh
+# Install ndx from GitHub Releases.
+#   curl -fsSL https://github.com/devlooped/ndx/releases/latest/download/install.sh | sh
 set -eu
 
-REPO="${NDNX_REPO:-devlooped/ndnx}"
-VERSION="${NDNX_VERSION:-}"
-PREFIX="${NDNX_PREFIX:-${HOME}/.local/bin}"
-ARCHIVE="${NDNX_ARCHIVE:-}"
-RID="${NDNX_RID:-}"
-SKIP_PATH="${NDNX_SKIP_PATH:-0}"
+REPO="${NDX_REPO:-devlooped/ndx}"
+VERSION="${NDX_VERSION:-}"
+PREFIX="${NDX_PREFIX:-${HOME}/.local/bin}"
+ARCHIVE="${NDX_ARCHIVE:-}"
+RID="${NDX_RID:-}"
+SKIP_PATH="${NDX_SKIP_PATH:-0}"
 
 detect_rid() {
     os=$(uname -s | tr '[:upper:]' '[:lower:]')
@@ -18,7 +18,7 @@ detect_rid() {
         x86_64|amd64) arch=x64 ;;
         aarch64|arm64) arch=arm64 ;;
         *)
-            echo "ndnx: unsupported architecture '$arch'" >&2
+            echo "ndx: unsupported architecture '$arch'" >&2
             exit 1
             ;;
     esac
@@ -28,7 +28,7 @@ detect_rid() {
         darwin) echo "osx-${arch}" ;;
         mingw*|msys*|cygwin*) echo "win-${arch}" ;;
         *)
-            echo "ndnx: unsupported OS '$os'" >&2
+            echo "ndx: unsupported OS '$os'" >&2
             exit 1
             ;;
     esac
@@ -41,7 +41,7 @@ github_json() {
     elif command -v wget >/dev/null 2>&1; then
         wget -qO- --header="Accept: application/vnd.github+json" "$url"
     else
-        echo "ndnx: need curl or wget" >&2
+        echo "ndx: need curl or wget" >&2
         exit 1
     fi
 }
@@ -73,12 +73,12 @@ verify_sha256() {
     elif command -v openssl >/dev/null 2>&1; then
         actual=$(openssl dgst -sha256 "$file" | awk '{print $NF}')
     else
-        echo "ndnx: no sha256 tool found (sha256sum, shasum, or openssl)" >&2
+        echo "ndx: no sha256 tool found (sha256sum, shasum, or openssl)" >&2
         exit 1
     fi
     actual=$(printf '%s' "$actual" | tr '[:upper:]' '[:lower:]')
     if [ "$actual" != "$expected" ]; then
-        echo "ndnx: SHA256 mismatch for $(basename "$file")" >&2
+        echo "ndx: SHA256 mismatch for $(basename "$file")" >&2
         echo "  expected: $expected" >&2
         echo "  actual:   $actual" >&2
         exit 1
@@ -90,10 +90,10 @@ if [ -z "$RID" ]; then
 fi
 
 case "$RID" in
-    win-*) binary=ndnx.exe; ext=zip ;;
-    linux-*|osx-*) binary=ndnx; ext=tar.gz ;;
+    win-*) binary=ndx.exe; ext=zip ;;
+    linux-*|osx-*) binary=ndx; ext=tar.gz ;;
     *)
-        echo "ndnx: unsupported RID '$RID'" >&2
+        echo "ndx: unsupported RID '$RID'" >&2
         exit 1
         ;;
 esac
@@ -121,13 +121,13 @@ if [ -z "$ARCHIVE" ]; then
         json=$(github_json "https://api.github.com/repos/${REPO}/releases/latest")
         tag=$(printf '%s' "$json" | json_string tag_name)
         if [ -z "$tag" ]; then
-            echo "ndnx: could not resolve latest release of ${REPO}" >&2
+            echo "ndx: could not resolve latest release of ${REPO}" >&2
             exit 1
         fi
         version=${tag#v}
     fi
 
-    name="ndnx-${version}-${RID}.${ext}"
+    name="ndx-${version}-${RID}.${ext}"
     base="https://github.com/${REPO}/releases/download/${tag}"
     ARCHIVE="${tmp}/${name}"
     download "${base}/${name}" "$ARCHIVE"
@@ -148,7 +148,7 @@ case "$ext" in
         if command -v unzip >/dev/null 2>&1; then
             unzip -o -q "$ARCHIVE" -d "$extract"
         else
-            echo "ndnx: unzip is required to extract Windows archives" >&2
+            echo "ndx: unzip is required to extract Windows archives" >&2
             exit 1
         fi
         ;;
@@ -158,7 +158,7 @@ case "$ext" in
 esac
 
 if [ ! -f "${extract}/${binary}" ]; then
-    echo "ndnx: archive did not contain ${binary}" >&2
+    echo "ndx: archive did not contain ${binary}" >&2
     exit 1
 fi
 
@@ -177,12 +177,12 @@ write_path_block() {
     file=$1
     kind=$2
     mkdir -p "$(dirname "$file")"
-    tmpfile="${file}.ndnx.tmp.$$"
+    tmpfile="${file}.ndx.tmp.$$"
     if [ -f "$file" ]; then
         awk '
             BEGIN { skip=0 }
-            /# >>> ndnx path >>>/ { skip=1; next }
-            /# <<< ndnx path <<</ { skip=0; next }
+            /# >>> ndx path >>>/ { skip=1; next }
+            /# <<< ndx path <<</ { skip=0; next }
             skip==0 { print }
         ' "$file" > "$tmpfile"
     else
@@ -193,18 +193,18 @@ write_path_block() {
     fi
     if [ "$kind" = fish ]; then
         cat >> "$tmpfile" <<EOF
-# >>> ndnx path >>>
+# >>> ndx path >>>
 fish_add_path ${PREFIX}
-# <<< ndnx path <<<
+# <<< ndx path <<<
 EOF
     else
         cat >> "$tmpfile" <<EOF
-# >>> ndnx path >>>
+# >>> ndx path >>>
 case ":\$PATH:" in
   *":${PREFIX}:"*) ;;
   *) export PATH="${PREFIX}:\$PATH" ;;
 esac
-# <<< ndnx path <<<
+# <<< ndx path <<<
 EOF
     fi
     mv "$tmpfile" "$file"
@@ -232,7 +232,7 @@ if [ "$SKIP_PATH" != "1" ]; then
     case ":${PATH}:" in
         *":${PREFIX}:"*) ;;
         *)
-            echo "restart your shell so ndnx is on PATH" >&2
+            echo "restart your shell so ndx is on PATH" >&2
             ;;
     esac
 fi
