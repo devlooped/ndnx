@@ -13,33 +13,21 @@ public class EvergreenTests : IClassFixture<HelloToolFeed>
 
     public EvergreenTests(HelloToolFeed feed) => this.feed = feed;
 
-    [Fact]
-    public async Task Star_version_that_exits_returns_child_code_and_does_not_restart()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("*")]
+    public async Task Floating_version_that_exits_returns_child_code_and_does_not_restart(string? version)
     {
         var runner = new RecordingProcessRunner { ExitCode = 7 };
         var host = NewHost(runner);
 
         var code = await App.RunAsync(
-            [HelloToolFeed.PackageId + "@*", "--yes", "--source", IsolatedHelloFeed()],
+            [Identity(version), "--yes", "--source", IsolatedHelloFeed()],
             host);
 
         Assert.Equal(7, code);
-        Assert.Equal(1, runner.Calls);
-    }
-
-    [Fact]
-    public async Task Unspecified_version_is_evergreen_and_uses_start()
-    {
-        var runner = new RecordingProcessRunner { ExitCode = 0 };
-        var host = NewHost(runner);
-
-        var code = await App.RunAsync(
-            [HelloToolFeed.PackageId, "--yes", "--source", IsolatedHelloFeed()],
-            host);
-
-        Assert.Equal(0, code);
-        Assert.Equal(1, runner.Calls);
-        Assert.NotNull(runner.Last);
+        Assert.Equal(1, runner.StartCalls);
+        Assert.Equal(0, runner.RunCalls);
     }
 
     [Fact]
@@ -53,11 +41,15 @@ public class EvergreenTests : IClassFixture<HelloToolFeed>
             host);
 
         Assert.Equal(4, code);
-        Assert.Equal(1, runner.Calls);
+        Assert.Equal(1, runner.RunCalls);
+        Assert.Equal(0, runner.StartCalls);
     }
 
-    [Fact]
-    public async Task Stages_newer_package_then_stops_and_restarts()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("*")]
+    [InlineData("1.*")]
+    public async Task Stages_newer_package_then_stops_and_restarts(string? version)
     {
         var feedDir = IsolatedHelloFeed();
         var first = new FakeChildProcess(0, exited: false);
@@ -79,14 +71,15 @@ public class EvergreenTests : IClassFixture<HelloToolFeed>
         };
 
         var run = App.RunAsync(
-            [HelloToolFeed.PackageId + "@*", "--yes", "--source", feedDir],
+            [Identity(version), "--yes", "--source", feedDir],
             host);
 
         await WaitUntil(() => runner.Calls >= 1, TimeSpan.FromSeconds(10));
         AddPackageVersion(feedDir, "1.0.1");
 
-        await WaitUntil(() => first.StopCalled && runner.Calls >= 2, TimeSpan.FromSeconds(15));
+        await WaitUntil(() => first.StopCalled && runner.StartCalls >= 2, TimeSpan.FromSeconds(15));
         Assert.True(first.StopCalled);
+        Assert.Equal(0, runner.RunCalls);
         Assert.Contains("Updating hello-tool 1.0.0 → 1.0.1", host.Out.ToString());
         Assert.Contains("1.0.1", Combined(runner.Starts[1]), StringComparison.OrdinalIgnoreCase);
 
@@ -94,8 +87,10 @@ public class EvergreenTests : IClassFixture<HelloToolFeed>
         Assert.Equal(0, await run);
     }
 
-    [Fact]
-    public async Task Unchanged_feed_does_not_stop_the_running_child()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("*")]
+    public async Task Unchanged_feed_does_not_stop_the_running_child(string? version)
     {
         var first = new FakeChildProcess(0, exited: false);
         var runner = new RecordingProcessRunner();
@@ -113,7 +108,7 @@ public class EvergreenTests : IClassFixture<HelloToolFeed>
 
         using var cts = new CancellationTokenSource();
         var run = App.RunAsync(
-            [HelloToolFeed.PackageId + "@*", "--yes", "--source", IsolatedHelloFeed()],
+            [Identity(version), "--yes", "--source", IsolatedHelloFeed()],
             host,
             cts.Token);
 
@@ -182,6 +177,9 @@ public class EvergreenTests : IClassFixture<HelloToolFeed>
             UpdateInterval = TimeSpan.FromHours(1),
         };
     }
+
+    static string Identity(string? version)
+        => version is null ? HelloToolFeed.PackageId : HelloToolFeed.PackageId + "@" + version;
 
     string IsolatedHelloFeed()
     {

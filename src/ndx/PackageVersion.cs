@@ -126,6 +126,9 @@ public readonly record struct VersionRange(PackageVersion? Min, bool IncludeMin,
             return true;
         }
 
+        if (TryParseStarFloating(text, out range))
+            return true;
+
         if (text[0] is '[' or '(' && text[^1] is ']' or ')')
         {
             var includeMin = text[0] == '[';
@@ -170,6 +173,45 @@ public readonly record struct VersionRange(PackageVersion? Min, bool IncludeMin,
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// GitHub Actions-style remaining-component float: <c>1.*</c> is
+    /// <c>[1.0.0, 2.0.0)</c>, <c>1.1.*</c> is <c>[1.1.0, 1.2.0)</c>,
+    /// <c>1.1.1.*</c> is <c>[1.1.1, 1.1.2)</c>. Bare <c>1.1</c> stays exact.
+    /// </summary>
+    static bool TryParseStarFloating(string text, out VersionRange range)
+    {
+        range = default;
+        if (!text.EndsWith(".*", StringComparison.Ordinal) || text.Length < 3)
+            return false;
+
+        var parts = text[..^2].Split('.');
+        if (parts.Length is < 1 or > 3)
+            return false;
+
+        var nums = new int[parts.Length];
+        for (var i = 0; i < parts.Length; i++)
+        {
+            if (!int.TryParse(parts[i], NumberStyles.None, CultureInfo.InvariantCulture, out nums[i]))
+                return false;
+        }
+
+        var min = parts.Length switch
+        {
+            1 => new PackageVersion(nums[0], 0, 0, null),
+            2 => new PackageVersion(nums[0], nums[1], 0, null),
+            _ => new PackageVersion(nums[0], nums[1], nums[2], null),
+        };
+        var max = parts.Length switch
+        {
+            1 => new PackageVersion(nums[0] + 1, 0, 0, null),
+            2 => new PackageVersion(nums[0], nums[1] + 1, 0, null),
+            _ => new PackageVersion(nums[0], nums[1], nums[2] + 1, null),
+        };
+
+        range = new VersionRange(min, true, max, false, false);
+        return true;
     }
 
     public static VersionRange FromInvocation(Invocation invocation)

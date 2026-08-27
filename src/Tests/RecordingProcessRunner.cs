@@ -6,14 +6,16 @@ sealed class RecordingProcessRunner : IProcessRunner
 {
     public ProcessStartSettings? Last { get; private set; }
     public List<ProcessStartSettings> Starts { get; } = [];
-    public int Calls { get; private set; }
+    public int RunCalls { get; private set; }
+    public int StartCalls { get; private set; }
+    public int Calls => RunCalls + StartCalls;
     public int ExitCode { get; set; }
     public Queue<IChildProcess> Next { get; } = new();
 
     public int Run(ProcessStartSettings settings)
     {
         Last = settings;
-        Calls++;
+        RunCalls++;
         Starts.Add(settings);
         return ExitCode;
     }
@@ -21,7 +23,7 @@ sealed class RecordingProcessRunner : IProcessRunner
     public IChildProcess Start(ProcessStartSettings settings)
     {
         Last = settings;
-        Calls++;
+        StartCalls++;
         Starts.Add(settings);
         return Next.Count > 0 ? Next.Dequeue() : new FakeChildProcess(ExitCode, exited: true);
     }

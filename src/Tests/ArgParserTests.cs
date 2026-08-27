@@ -94,6 +94,19 @@ public class ArgParserTests
         Assert.Contains("--version", parsed.Error);
     }
 
+    [Theory]
+    [InlineData("pkg@1.*", "1.*")]
+    [InlineData("pkg@1.1.*", "1.1.*")]
+    [InlineData("pkg@1.1.1.*", "1.1.1.*")]
+    public void Star_floating_versions_are_accepted(string identity, string version)
+    {
+        var parsed = ArgParser.Parse(identity);
+
+        Assert.True(parsed.Success);
+        Assert.Equal("pkg", parsed.PackageId);
+        Assert.Equal(version, parsed.Version);
+    }
+
     [Fact]
     public void Equals_form_is_accepted_for_valued_options()
     {
