@@ -1,7 +1,11 @@
-# ndx
+<p align="center">
+  <img src="assets/icon.svg" alt="ndx" width="256">
+</p>
 
-[![Release](https://img.shields.io/github/v/release/devlooped/ndx?include_prereleases&color=darkmagenta)](https://github.com/devlooped/ndx/releases)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/devlooped/oss/blob/main/license.txt)
+<p align="center">
+  <a href="https://github.com/devlooped/ndx/releases"><img src="https://img.shields.io/github/v/release/devlooped/ndx?include_prereleases&color=darkmagenta" alt="Release"></a>
+  <a href="https://github.com/devlooped/oss/blob/main/license.txt"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
+</p>
 
 <!-- #content -->
 `ndx` (*n*ative *d*otnet e*x*ecute) is [`dnx`](https://learn.microsoft.com/dotnet/core/tools/dotnet-tool-exec) for
