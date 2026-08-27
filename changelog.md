@@ -2,7 +2,15 @@
 
 ## [ci](https://github.com/devlooped/ndx/tree/ci) (2026-08-27)
 
-[Full Changelog](https://github.com/devlooped/ndx/compare/v1.0.1...ci)
+[Full Changelog](https://github.com/devlooped/ndx/compare/v1.0.2...ci)
+
+## [v1.0.2](https://github.com/devlooped/ndx/tree/v1.0.2) (2026-08-27)
+
+[Full Changelog](https://github.com/devlooped/ndx/compare/v1.0.1...v1.0.2)
+
+:sparkles: Implemented enhancements:
+
+- Pack ndx as a multi-RID NuGet tool [\#18](https://github.com/devlooped/ndx/pull/18) (@kzu)
 
 ## [v1.0.1](https://github.com/devlooped/ndx/tree/v1.0.1) (2026-08-27)
 
