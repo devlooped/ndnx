@@ -3,7 +3,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/devlooped/ndx/releases"><img src="https://img.shields.io/github/v/release/devlooped/ndx?include_prereleases&color=darkmagenta" alt="Release"></a>
+  <a href="https://github.com/devlooped/ndx/releases"><img src="https://img.shields.io/github/v/release/devlooped/ndx?include_prereleases&color=green" alt="Release"></a>
+  <a href="https://www.nuget.org/packages/ndx"><img src="https://img.shields.io/nuget/v/ndx.svg?color=royalblue" alt="Version"></a>
   <a href="https://github.com/devlooped/oss/blob/main/license.txt"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
 </p>
 
