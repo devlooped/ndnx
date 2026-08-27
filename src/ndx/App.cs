@@ -1,9 +1,9 @@
-namespace ndnx;
+namespace ndx;
 
 /// <summary>
-/// Host overrides used by tests. Production uses <see cref="NdnxHost.CreateDefault"/>.
+/// Host overrides used by tests. Production uses <see cref="NdxHost.CreateDefault"/>.
 /// </summary>
-public sealed class NdnxHost
+public sealed class NdxHost
 {
     public string WorkingDirectory { get; init; } = Directory.GetCurrentDirectory();
     public string StoreDirectory { get; init; } = DefaultStoreDirectory();
@@ -21,7 +21,7 @@ public sealed class NdnxHost
     public bool ShowProgress { get; init; }
     public TextWriter? Progress { get; init; }
 
-    public static NdnxHost CreateDefault()
+    public static NdxHost CreateDefault()
     {
         var progress = ConsoleProgress.TryOpen();
         return new()
@@ -32,22 +32,22 @@ public sealed class NdnxHost
     }
 
     public static string DefaultStoreDirectory(string? workingDirectory = null)
-        => Environment.GetEnvironmentVariable("NDNX_STORE")
+        => Environment.GetEnvironmentVariable("NDX_STORE")
            ?? GlobalPackagesFolder.Resolve(workingDirectory);
 }
 
 /// <summary>
-/// ndnx entry orchestration: parse, download-to-cache, start child, relay exit code.
+/// ndx entry orchestration: parse, download-to-cache, start child, relay exit code.
 /// </summary>
 public static class App
 {
     const string Usage = """
-        Usage: ndnx <PACKAGE_NAME[@VERSION]> [options] [--] [tool arguments]
-               ndnx --update [VERSION|ci]
-               ndnx --version
+        Usage: ndx <PACKAGE_NAME[@VERSION]> [options] [--] [tool arguments]
+               ndx --update [VERSION|ci]
+               ndx --version
 
         A floating version (unspecified, @*, @*-*, or a range) stays current:
-        ndnx watches the feed and restarts the tool when a newer match appears.
+        ndx watches the feed and restarts the tool when a newer match appears.
 
         Options:
           --source <SOURCE>          Override package sources
@@ -63,14 +63,14 @@ public static class App
           --no-http-cache            Do not use an HTTP cache
           --interactive              Allow interactive restore prompts
           --update [VERSION]         Self-update to latest, a version, or ci (rolling prerelease)
-          --version                  Print the ndnx version
+          --version                  Print the ndx version
         """;
 
     public static int Run(string[] args) => RunAsync(args).GetAwaiter().GetResult();
 
-    public static async Task<int> RunAsync(string[] args, NdnxHost? host = null, CancellationToken cancellationToken = default)
+    public static async Task<int> RunAsync(string[] args, NdxHost? host = null, CancellationToken cancellationToken = default)
     {
-        host ??= NdnxHost.CreateDefault();
+        host ??= NdxHost.CreateDefault();
         var invocation = ArgParser.Parse(args);
         if (invocation.ShowHelp)
         {
@@ -133,7 +133,7 @@ public static class App
         }
     }
 
-    static HttpClient CreateHttpClient(NdnxHost host)
+    static HttpClient CreateHttpClient(NdxHost host)
         => host.HttpHandler is { } handler
             ? new HttpClient(handler, disposeHandler: false)
             : new HttpClient(new SocketsHttpHandler

@@ -1,6 +1,6 @@
 using System.Xml.Linq;
 
-namespace ndnx;
+namespace ndx;
 
 /// <summary>
 /// Resolves the NuGet global packages folder the same way restore does,

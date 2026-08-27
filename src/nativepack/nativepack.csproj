@@ -4,10 +4,10 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <RootNamespace>ndnx</RootNamespace>
+    <RootNamespace>ndx</RootNamespace>
     <AssemblyName>nativepack</AssemblyName>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <IsPackable>false</IsPackable>
-    <StartupObject>ndnx.PackProgram</StartupObject>
+    <StartupObject>ndx.PackProgram</StartupObject>
   </PropertyGroup>
 </Project>

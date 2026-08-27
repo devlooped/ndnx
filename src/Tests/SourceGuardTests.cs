@@ -3,12 +3,12 @@ namespace Tests;
 public class SourceGuardTests
 {
     [Fact]
-    public void Ndnx_sources_do_not_gate_on_child_aot()
+    public void Ndx_sources_do_not_gate_on_child_aot()
     {
-        var ndnxDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "ndnx"));
-        Assert.True(Directory.Exists(ndnxDir), $"Could not find ndnx sources at {ndnxDir}");
+        var ndxDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "ndx"));
+        Assert.True(Directory.Exists(ndxDir), $"Could not find ndx sources at {ndxDir}");
 
-        foreach (var file in Directory.GetFiles(ndnxDir, "*.cs"))
+        foreach (var file in Directory.GetFiles(ndxDir, "*.cs"))
         {
             var text = File.ReadAllText(file);
             Assert.DoesNotContain("IsNativeAot", text, StringComparison.OrdinalIgnoreCase);

@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace ndnx;
+namespace ndx;
 
 /// <summary>
 /// Renders HTTP nupkg download progress: a byte bar when the total is known,

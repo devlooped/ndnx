@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace ndnx;
+namespace ndx;
 
 /// <summary>
 /// The <c>dotnet</c> muxer that will <c>exec</c> a framework-dependent tool.

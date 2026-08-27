@@ -1,4 +1,4 @@
-using ndnx;
+using ndx;
 
 namespace Tests;
 

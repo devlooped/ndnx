@@ -2,7 +2,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Text;
-using ndnx;
+using ndx;
 
 namespace Tests;
 
@@ -227,7 +227,7 @@ public class PackageFeedTests
         MapCatalog(handler, PackageId, body.Length);
         using var error = new StringWriter();
         using var output = new StringWriter();
-        var host = new NdnxHost
+        var host = new NdxHost
         {
             HttpHandler = handler,
             Error = error,
@@ -258,7 +258,7 @@ public class PackageFeedTests
         using var error = new StringWriter();
         using var progress = new StringWriter();
         using var output = new StringWriter();
-        var host = new NdnxHost
+        var host = new NdxHost
         {
             HttpHandler = handler,
             Error = error,
@@ -345,7 +345,7 @@ public class PackageFeedTests
 
     static void SaveEvidence(string fileName, string content)
     {
-        var dir = Environment.GetEnvironmentVariable("NDNX_PROGRESS_EVIDENCE");
+        var dir = Environment.GetEnvironmentVariable("NDX_PROGRESS_EVIDENCE");
         if (string.IsNullOrWhiteSpace(dir))
             return;
         Directory.CreateDirectory(dir);
@@ -376,14 +376,14 @@ public class PackageFeedTests
 
     static string NewStore()
     {
-        var store = Path.Combine(Path.GetTempPath(), "ndnx-feed-tests", Guid.NewGuid().ToString("n"));
+        var store = Path.Combine(Path.GetTempPath(), "ndx-feed-tests", Guid.NewGuid().ToString("n"));
         Directory.CreateDirectory(store);
         return store;
     }
 
     sealed class TempNupkgs : IDisposable
     {
-        public string Root { get; } = Path.Combine(Path.GetTempPath(), "ndnx-feed-nupkgs", Guid.NewGuid().ToString("n"));
+        public string Root { get; } = Path.Combine(Path.GetTempPath(), "ndx-feed-nupkgs", Guid.NewGuid().ToString("n"));
         public string Plain { get; }
         public string RidWrapper { get; }
         public string RidImpl { get; }
@@ -430,7 +430,7 @@ public class PackageFeedTests
                   <metadata>
                     <id>{packageId}</id>
                     <version>{VersionText}</version>
-                    <authors>ndnx</authors>
+                    <authors>ndx</authors>
                     <description>{packageId}</description>
                     <packageTypes>
                       <packageType name="{(ridPackages is null && packageId != RidImplId ? "DotnetTool" : packageId == RidWrapperId ? "DotnetTool" : "DotnetToolRidPackage")}" />

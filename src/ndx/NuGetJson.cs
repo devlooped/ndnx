@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using static System.Text.Json.Serialization.JsonIgnoreCondition;
 
-namespace ndnx;
+namespace ndx;
 
 sealed class ServiceIndex
 {

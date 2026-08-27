@@ -13,7 +13,7 @@
     <Using Include="Xunit" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\ndnx\ndnx.csproj" />
+    <ProjectReference Include="..\ndx\ndx.csproj" />
     <ProjectReference Include="..\nativepack\nativepack.csproj" />
   </ItemGroup>
 </Project>

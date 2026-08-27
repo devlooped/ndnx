@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace ndnx;
+namespace ndx;
 
 /// <summary>
 /// Picks a RID-specific tool package the way the SDK's

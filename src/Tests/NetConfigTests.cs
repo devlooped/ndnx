@@ -1,4 +1,4 @@
-using ndnx;
+using ndx;
 
 namespace Tests;
 
@@ -18,7 +18,7 @@ public class NetConfigTests
         var dir = NewDir();
         File.WriteAllText(Path.Combine(dir, ".netconfig"),
             """
-            [ndnx]
+            [ndx]
                 interval = 2
             """);
 
@@ -33,7 +33,7 @@ public class NetConfigTests
         File.WriteAllText(Path.Combine(dir, ".netconfig"),
             """
             # comment
-            [ndnx]
+            [ndx]
                 interval = "7" ; seconds
             """);
 
@@ -47,7 +47,7 @@ public class NetConfigTests
         var dir = NewDir();
         File.WriteAllText(Path.Combine(dir, ".netconfig"),
             """
-            [ndnx]
+            [ndx]
                 interval = 0
             """);
 
@@ -61,7 +61,7 @@ public class NetConfigTests
         var root = NewDir();
         File.WriteAllText(Path.Combine(root, ".netconfig"),
             """
-            [ndnx]
+            [ndx]
                 interval = 3
             """);
         var child = Path.Combine(root, "sub");
@@ -78,7 +78,7 @@ public class NetConfigTests
         var home = NewDir();
         File.WriteAllText(Path.Combine(home, ".netconfig"),
             """
-            [ndnx]
+            [ndx]
                 interval = 9
             """);
 
@@ -94,7 +94,7 @@ public class NetConfigTests
             """
             [evergreen]
                 interval = 1
-            [ndnx "other"]
+            [ndx "other"]
                 interval = 2
             """);
 
@@ -104,7 +104,7 @@ public class NetConfigTests
 
     static string NewDir()
     {
-        var dir = Path.Combine(Path.GetTempPath(), "ndnx-netconfig", Guid.NewGuid().ToString("n"));
+        var dir = Path.Combine(Path.GetTempPath(), "ndx-netconfig", Guid.NewGuid().ToString("n"));
         Directory.CreateDirectory(dir);
         return dir;
     }

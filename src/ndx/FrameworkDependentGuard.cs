@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace ndnx;
+namespace ndx;
 
 /// <summary>
 /// Best-effort preflight for <c>Runner=dotnet</c>: can the resolved muxer's

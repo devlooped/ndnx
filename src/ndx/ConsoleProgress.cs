@@ -1,4 +1,4 @@
-namespace ndnx;
+namespace ndx;
 
 /// <summary>
 /// Live console writer for download progress. PowerShell 7 on Windows pipes

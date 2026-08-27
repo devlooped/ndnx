@@ -2,7 +2,7 @@ using System.Formats.Tar;
 using System.IO.Compression;
 using System.Security.Cryptography;
 
-namespace ndnx;
+namespace ndx;
 
 /// <summary>
 /// Turns a Native AOT publish directory into the archive + SHA256
@@ -14,12 +14,12 @@ public static class NativePacker
         => rid.StartsWith("win", StringComparison.OrdinalIgnoreCase);
 
     public static string BinaryFileName(string rid)
-        => IsWindowsRid(rid) ? "ndnx.exe" : "ndnx";
+        => IsWindowsRid(rid) ? "ndx.exe" : "ndx";
 
     public static string ArchiveFileName(string rid, string version)
         => IsWindowsRid(rid)
-            ? $"ndnx-{version}-{rid}.zip"
-            : $"ndnx-{version}-{rid}.tar.gz";
+            ? $"ndx-{version}-{rid}.zip"
+            : $"ndx-{version}-{rid}.tar.gz";
 
     public static NativePackResult Pack(
         string publishDirectory,

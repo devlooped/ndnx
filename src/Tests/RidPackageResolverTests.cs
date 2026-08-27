@@ -1,5 +1,5 @@
 using System.Runtime.InteropServices;
-using ndnx;
+using ndx;
 
 namespace Tests;
 

@@ -1,6 +1,6 @@
 using System.Xml.Linq;
 
-namespace ndnx;
+namespace ndx;
 
 /// <summary>
 /// Resolves NuGet sources from --source / --add-source / --configfile / nuget.config.

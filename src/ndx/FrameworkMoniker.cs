@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 
-namespace ndnx;
+namespace ndx;
 
 /// <summary>
 /// Major.minor of a .NET runtime / tools TFM folder (<c>net10.0</c>, <c>netcoreapp3.1</c>).

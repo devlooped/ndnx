@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <Product>ndnx</Product>
+    <Product>ndx</Product>
     <ImplicitUsings>true</ImplicitUsings>
   </PropertyGroup>
 </Project>

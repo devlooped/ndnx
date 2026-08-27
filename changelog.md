@@ -1,93 +1,93 @@
 # Changelog
 
-## [ci](https://github.com/devlooped/ndnx/tree/ci) (2026-08-25)
+## [ci](https://github.com/devlooped/ndx/tree/ci) (2026-08-25)
 
-[Full Changelog](https://github.com/devlooped/ndnx/compare/v0.6.6...ci)
+[Full Changelog](https://github.com/devlooped/ndx/compare/v0.6.6...ci)
 
-## [v0.6.6](https://github.com/devlooped/ndnx/tree/v0.6.6) (2026-08-25)
+## [v0.6.6](https://github.com/devlooped/ndx/tree/v0.6.6) (2026-08-25)
 
-[Full Changelog](https://github.com/devlooped/ndnx/compare/v0.6.5...v0.6.6)
-
-:twisted_rightwards_arrows: Merged:
-
-- Fix ci-release when an untagged ci draft blocks create [\#15](https://github.com/devlooped/ndnx/pull/15) (@kzu)
-
-## [v0.6.5](https://github.com/devlooped/ndnx/tree/v0.6.5) (2026-08-25)
-
-[Full Changelog](https://github.com/devlooped/ndnx/compare/v0.6.4...v0.6.5)
+[Full Changelog](https://github.com/devlooped/ndx/compare/v0.6.5...v0.6.6)
 
 :twisted_rightwards_arrows: Merged:
 
-- Skip publish.yml for the rolling ci tag [\#14](https://github.com/devlooped/ndnx/pull/14) (@kzu)
+- Fix ci-release when an untagged ci draft blocks create [\#15](https://github.com/devlooped/ndx/pull/15) (@kzu)
 
-## [v0.6.4](https://github.com/devlooped/ndnx/tree/v0.6.4) (2026-08-25)
+## [v0.6.5](https://github.com/devlooped/ndx/tree/v0.6.5) (2026-08-25)
 
-[Full Changelog](https://github.com/devlooped/ndnx/compare/v0.6.3...v0.6.4)
+[Full Changelog](https://github.com/devlooped/ndx/compare/v0.6.4...v0.6.5)
 
-:bug: Fixed bugs:
+:twisted_rightwards_arrows: Merged:
 
-- fix: show download progress on Windows PowerShell [\#13](https://github.com/devlooped/ndnx/pull/13) (@kzu)
+- Skip publish.yml for the rolling ci tag [\#14](https://github.com/devlooped/ndx/pull/14) (@kzu)
 
-## [v0.6.3](https://github.com/devlooped/ndnx/tree/v0.6.3) (2026-08-25)
+## [v0.6.4](https://github.com/devlooped/ndx/tree/v0.6.4) (2026-08-25)
 
-[Full Changelog](https://github.com/devlooped/ndnx/compare/v0.6.2...v0.6.3)
-
-:sparkles: Implemented enhancements:
-
-- feat: publish a rolling ci prerelease for dogfood [\#11](https://github.com/devlooped/ndnx/pull/11) (@kzu)
-- Show download progress for large native nupkgs [\#10](https://github.com/devlooped/ndnx/pull/10) (@kzu)
+[Full Changelog](https://github.com/devlooped/ndx/compare/v0.6.3...v0.6.4)
 
 :bug: Fixed bugs:
 
-- fix: only start ci-release after a successful build on main [\#12](https://github.com/devlooped/ndnx/pull/12) (@kzu)
+- fix: show download progress on Windows PowerShell [\#13](https://github.com/devlooped/ndx/pull/13) (@kzu)
 
-## [v0.6.2](https://github.com/devlooped/ndnx/tree/v0.6.2) (2026-08-20)
+## [v0.6.3](https://github.com/devlooped/ndx/tree/v0.6.3) (2026-08-25)
 
-[Full Changelog](https://github.com/devlooped/ndnx/compare/v0.6.1...v0.6.2)
+[Full Changelog](https://github.com/devlooped/ndx/compare/v0.6.2...v0.6.3)
 
 :sparkles: Implemented enhancements:
 
-- Report a dnx-style error when a tool version is missing from the feed [\#8](https://github.com/devlooped/ndnx/pull/8) (@kzu)
+- feat: publish a rolling ci prerelease for dogfood [\#11](https://github.com/devlooped/ndx/pull/11) (@kzu)
+- Show download progress for large native nupkgs [\#10](https://github.com/devlooped/ndx/pull/10) (@kzu)
 
-## [v0.6.1](https://github.com/devlooped/ndnx/tree/v0.6.1) (2026-08-20)
+:bug: Fixed bugs:
 
-[Full Changelog](https://github.com/devlooped/ndnx/compare/v0.6.0...v0.6.1)
+- fix: only start ci-release after a successful build on main [\#12](https://github.com/devlooped/ndx/pull/12) (@kzu)
 
-## [v0.6.0](https://github.com/devlooped/ndnx/tree/v0.6.0) (2026-08-15)
+## [v0.6.2](https://github.com/devlooped/ndx/tree/v0.6.2) (2026-08-20)
 
-[Full Changelog](https://github.com/devlooped/ndnx/compare/v0.5.2...v0.6.0)
+[Full Changelog](https://github.com/devlooped/ndx/compare/v0.6.1...v0.6.2)
 
-## [v0.5.2](https://github.com/devlooped/ndnx/tree/v0.5.2) (2026-08-15)
+:sparkles: Implemented enhancements:
 
-[Full Changelog](https://github.com/devlooped/ndnx/compare/v0.5.1...v0.5.2)
+- Report a dnx-style error when a tool version is missing from the feed [\#8](https://github.com/devlooped/ndx/pull/8) (@kzu)
 
-## [v0.5.1](https://github.com/devlooped/ndnx/tree/v0.5.1) (2026-08-15)
+## [v0.6.1](https://github.com/devlooped/ndx/tree/v0.6.1) (2026-08-20)
 
-[Full Changelog](https://github.com/devlooped/ndnx/compare/v0.5.0...v0.5.1)
+[Full Changelog](https://github.com/devlooped/ndx/compare/v0.6.0...v0.6.1)
 
-## [v0.5.0](https://github.com/devlooped/ndnx/tree/v0.5.0) (2026-08-15)
+## [v0.6.0](https://github.com/devlooped/ndx/tree/v0.6.0) (2026-08-15)
 
-[Full Changelog](https://github.com/devlooped/ndnx/compare/v0.4.0...v0.5.0)
+[Full Changelog](https://github.com/devlooped/ndx/compare/v0.5.2...v0.6.0)
 
-## [v0.4.0](https://github.com/devlooped/ndnx/tree/v0.4.0) (2026-08-15)
+## [v0.5.2](https://github.com/devlooped/ndx/tree/v0.5.2) (2026-08-15)
 
-[Full Changelog](https://github.com/devlooped/ndnx/compare/v0.3.0...v0.4.0)
+[Full Changelog](https://github.com/devlooped/ndx/compare/v0.5.1...v0.5.2)
 
-## [v0.3.0](https://github.com/devlooped/ndnx/tree/v0.3.0) (2026-08-15)
+## [v0.5.1](https://github.com/devlooped/ndx/tree/v0.5.1) (2026-08-15)
 
-[Full Changelog](https://github.com/devlooped/ndnx/compare/v0.2.0...v0.3.0)
+[Full Changelog](https://github.com/devlooped/ndx/compare/v0.5.0...v0.5.1)
 
-## [v0.2.0](https://github.com/devlooped/ndnx/tree/v0.2.0) (2026-08-14)
+## [v0.5.0](https://github.com/devlooped/ndx/tree/v0.5.0) (2026-08-15)
 
-[Full Changelog](https://github.com/devlooped/ndnx/compare/v0.1.1...v0.2.0)
+[Full Changelog](https://github.com/devlooped/ndx/compare/v0.4.0...v0.5.0)
 
-## [v0.1.1](https://github.com/devlooped/ndnx/tree/v0.1.1) (2026-08-14)
+## [v0.4.0](https://github.com/devlooped/ndx/tree/v0.4.0) (2026-08-15)
 
-[Full Changelog](https://github.com/devlooped/ndnx/compare/v0.1.0...v0.1.1)
+[Full Changelog](https://github.com/devlooped/ndx/compare/v0.3.0...v0.4.0)
 
-## [v0.1.0](https://github.com/devlooped/ndnx/tree/v0.1.0) (2026-08-13)
+## [v0.3.0](https://github.com/devlooped/ndx/tree/v0.3.0) (2026-08-15)
 
-[Full Changelog](https://github.com/devlooped/ndnx/compare/5d6336c96c3e2b75ef31dccbf9b312230fe94afa...v0.1.0)
+[Full Changelog](https://github.com/devlooped/ndx/compare/v0.2.0...v0.3.0)
+
+## [v0.2.0](https://github.com/devlooped/ndx/tree/v0.2.0) (2026-08-14)
+
+[Full Changelog](https://github.com/devlooped/ndx/compare/v0.1.1...v0.2.0)
+
+## [v0.1.1](https://github.com/devlooped/ndx/tree/v0.1.1) (2026-08-14)
+
+[Full Changelog](https://github.com/devlooped/ndx/compare/v0.1.0...v0.1.1)
+
+## [v0.1.0](https://github.com/devlooped/ndx/tree/v0.1.0) (2026-08-13)
+
+[Full Changelog](https://github.com/devlooped/ndx/compare/5d6336c96c3e2b75ef31dccbf9b312230fe94afa...v0.1.0)
 
 
 

@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Xml.Linq;
-using ndnx;
+using ndx;
 
 namespace Tests;
 
@@ -67,7 +67,7 @@ public class EvergreenTests : IClassFixture<HelloToolFeed>
         runner.Next.Enqueue(second);
 
         var host = NewHost(runner, feedDir);
-        host = new NdnxHost
+        host = new NdxHost
         {
             WorkingDirectory = host.WorkingDirectory,
             StoreDirectory = host.StoreDirectory,
@@ -101,7 +101,7 @@ public class EvergreenTests : IClassFixture<HelloToolFeed>
         var runner = new RecordingProcessRunner();
         runner.Next.Enqueue(first);
         var host = NewHost(runner);
-        host = new NdnxHost
+        host = new NdxHost
         {
             WorkingDirectory = host.WorkingDirectory,
             StoreDirectory = host.StoreDirectory,
@@ -130,11 +130,11 @@ public class EvergreenTests : IClassFixture<HelloToolFeed>
     [Fact]
     public async Task Host_update_interval_overrides_netconfig()
     {
-        var dir = Path.Combine(Path.GetTempPath(), "ndnx-evergreen-cfg", Guid.NewGuid().ToString("n"));
+        var dir = Path.Combine(Path.GetTempPath(), "ndx-evergreen-cfg", Guid.NewGuid().ToString("n"));
         Directory.CreateDirectory(dir);
         File.WriteAllText(Path.Combine(dir, ".netconfig"),
             """
-            [ndnx]
+            [ndx]
                 interval = 30
             """);
 
@@ -142,7 +142,7 @@ public class EvergreenTests : IClassFixture<HelloToolFeed>
         Assert.Equal(TimeSpan.FromSeconds(30), interval);
 
         var runner = new RecordingProcessRunner { ExitCode = 0 };
-        var host = new NdnxHost
+        var host = new NdxHost
         {
             WorkingDirectory = dir,
             StoreDirectory = Path.Combine(dir, "store"),
@@ -161,18 +161,18 @@ public class EvergreenTests : IClassFixture<HelloToolFeed>
     [Fact]
     public void Ci_feed_stop_star_help_exits()
     {
-        var store = Path.Combine(Path.GetTempPath(), "ndnx-evergreen-ci", Guid.NewGuid().ToString("n"));
+        var store = Path.Combine(Path.GetTempPath(), "ndx-evergreen-ci", Guid.NewGuid().ToString("n"));
         Directory.CreateDirectory(store);
-        var result = LaunchNdnx(store, ["stop@*", "--yes", "--source", CiFeed, "--", "--help"]);
+        var result = LaunchNdx(store, ["stop@*", "--yes", "--source", CiFeed, "--", "--help"]);
         Assert.Equal(0, result.ExitCode);
         Assert.Contains("timeout", result.Stdout + result.Stderr, StringComparison.OrdinalIgnoreCase);
     }
 
-    NdnxHost NewHost(IProcessRunner runner, string? sourceDir = null)
+    NdxHost NewHost(IProcessRunner runner, string? sourceDir = null)
     {
-        var root = Path.Combine(Path.GetTempPath(), "ndnx-evergreen", Guid.NewGuid().ToString("n"));
+        var root = Path.Combine(Path.GetTempPath(), "ndx-evergreen", Guid.NewGuid().ToString("n"));
         Directory.CreateDirectory(root);
-        return new NdnxHost
+        return new NdxHost
         {
             WorkingDirectory = sourceDir ?? root,
             StoreDirectory = Path.Combine(root, "store"),
@@ -185,7 +185,7 @@ public class EvergreenTests : IClassFixture<HelloToolFeed>
 
     string IsolatedHelloFeed()
     {
-        var dir = Path.Combine(Path.GetTempPath(), "ndnx-evergreen-feed", Guid.NewGuid().ToString("n"));
+        var dir = Path.Combine(Path.GetTempPath(), "ndx-evergreen-feed", Guid.NewGuid().ToString("n"));
         Directory.CreateDirectory(dir);
         var nupkg = Path.Combine(feed.FeedDirectory, $"{HelloToolFeed.PackageId}.{HelloToolFeed.PackageVersion}.nupkg");
         File.Copy(nupkg, Path.Combine(dir, Path.GetFileName(nupkg)));
@@ -237,10 +237,10 @@ public class EvergreenTests : IClassFixture<HelloToolFeed>
         throw new TimeoutException("Condition was not met in time.");
     }
 
-    static (int ExitCode, string Stdout, string Stderr) LaunchNdnx(string store, string[] args)
+    static (int ExitCode, string Stdout, string Stderr) LaunchNdx(string store, string[] args)
     {
-        var ndnxDll = Path.Combine(AppContext.BaseDirectory, "ndnx.dll");
-        Assert.True(File.Exists(ndnxDll), $"Expected shipped ndnx.dll at {ndnxDll}");
+        var ndxDll = Path.Combine(AppContext.BaseDirectory, "ndx.dll");
+        Assert.True(File.Exists(ndxDll), $"Expected shipped ndx.dll at {ndxDll}");
 
         var start = new ProcessStartInfo
         {
@@ -250,10 +250,10 @@ public class EvergreenTests : IClassFixture<HelloToolFeed>
             UseShellExecute = false,
         };
         start.ArgumentList.Add("exec");
-        start.ArgumentList.Add(ndnxDll);
+        start.ArgumentList.Add(ndxDll);
         foreach (var arg in args)
             start.ArgumentList.Add(arg);
-        start.Environment["NDNX_STORE"] = store;
+        start.Environment["NDX_STORE"] = store;
         return ProcessCapture.Run(start);
     }
 }

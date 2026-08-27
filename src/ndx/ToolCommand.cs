@@ -1,4 +1,4 @@
-namespace ndnx;
+namespace ndx;
 
 /// <summary>
 /// Command declared by a downloaded tool package.

@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using ndnx;
+using ndx;
 
 namespace Tests;
 
@@ -18,7 +18,7 @@ public class PublishedToolTests
     const string GoId = "go";
     const string GoVersion = "1.1.1";
 
-    static readonly string Store = Path.Combine(Path.GetTempPath(), "ndnx-published-tool-store");
+    static readonly string Store = Path.Combine(Path.GetTempPath(), "ndx-published-tool-store");
 
     [Fact]
     public async Task Published_stop_hops_to_rid_package_and_runs_help()
@@ -38,7 +38,7 @@ public class PublishedToolTests
             Path.GetFullPath(command.EntryPointPath),
             StringComparison.OrdinalIgnoreCase);
 
-        var result = LaunchNdnx([StopId + "@" + StopVersion, "--yes", "--source", NugetOrg, "--", "--help"]);
+        var result = LaunchNdx([StopId + "@" + StopVersion, "--yes", "--source", NugetOrg, "--", "--help"]);
         Assert.Equal(0, result.ExitCode);
         Assert.Contains("timeout", result.Stdout + result.Stderr, StringComparison.OrdinalIgnoreCase);
         Assert.True(Cached(expectedPackage, StopVersion), expectedPackage);
@@ -70,7 +70,7 @@ public class PublishedToolTests
             command.EntryPointPath,
             StringComparison.OrdinalIgnoreCase);
 
-        var result = LaunchNdnx([GoId + "@" + GoVersion, "--yes", "--source", NugetOrg, "--", "--help"]);
+        var result = LaunchNdx([GoId + "@" + GoVersion, "--yes", "--source", NugetOrg, "--", "--help"]);
         Assert.Equal(0, result.ExitCode);
         Assert.Contains("file-based", result.Stdout + result.Stderr, StringComparison.OrdinalIgnoreCase);
         Assert.True(Cached(expectedPackage, GoVersion), expectedPackage);
@@ -157,10 +157,10 @@ public class PublishedToolTests
     static bool Cached(string packageId, string version)
         => ToolPackageStore.IsCached(Path.Combine(Store, packageId.ToLowerInvariant(), version.ToLowerInvariant()));
 
-    static (int ExitCode, string Stdout, string Stderr) LaunchNdnx(string[] args)
+    static (int ExitCode, string Stdout, string Stderr) LaunchNdx(string[] args)
     {
-        var ndnxDll = Path.Combine(AppContext.BaseDirectory, "ndnx.dll");
-        Assert.True(File.Exists(ndnxDll), $"Expected shipped ndnx.dll at {ndnxDll}");
+        var ndxDll = Path.Combine(AppContext.BaseDirectory, "ndx.dll");
+        Assert.True(File.Exists(ndxDll), $"Expected shipped ndx.dll at {ndxDll}");
 
         var start = new ProcessStartInfo
         {
@@ -170,10 +170,10 @@ public class PublishedToolTests
             UseShellExecute = false,
         };
         start.ArgumentList.Add("exec");
-        start.ArgumentList.Add(ndnxDll);
+        start.ArgumentList.Add(ndxDll);
         foreach (var arg in args)
             start.ArgumentList.Add(arg);
-        start.Environment["NDNX_STORE"] = Store;
+        start.Environment["NDX_STORE"] = Store;
         return ProcessCapture.Run(start);
     }
 }

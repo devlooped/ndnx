@@ -5,7 +5,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Xml.Linq;
 
-namespace ndnx;
+namespace ndx;
 
 public sealed record PackageIdentity(string Id, PackageVersion Version, string Source);
 

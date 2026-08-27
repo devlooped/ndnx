@@ -1,19 +1,19 @@
-# ndnx
+# ndx
 
-[![Release](https://img.shields.io/github/v/release/devlooped/ndnx?include_prereleases&color=darkmagenta)](https://github.com/devlooped/ndnx/releases)
+[![Release](https://img.shields.io/github/v/release/devlooped/ndx?include_prereleases&color=darkmagenta)](https://github.com/devlooped/ndx/releases)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/devlooped/oss/blob/main/license.txt)
 
 <!-- #content -->
-`ndnx` is [`dnx`](https://learn.microsoft.com/dotnet/core/tools/dotnet-tool-exec) for
+`ndx` (*n*ative *d*otnet e*x*ecute) is [`dnx`](https://learn.microsoft.com/dotnet/core/tools/dotnet-tool-exec) for
 native tools packaged and distributed as NuGet packages. Same one-shot CLI, same
 `PACKAGE[@VERSION]` identity, same restore flags, same global packages folder.
 
-If you can `dnx stop`, you can `ndnx stop`. `dotnet dnx` and `dotnet tool exec`
-are the same command; `ndnx` speaks that protocol, including RID-specific Native
+If you can `dnx stop`, you can `ndx stop`. `dotnet dnx` and `dotnet tool exec`
+are the same command; `ndx` speaks that protocol, including RID-specific Native
 AOT tools (`stop`, `go`, `winget`) and ordinary framework-dependent tools
 (`dotnetsay`).
 
-A first run downloads into the NuGet cache. A later `ndnx tool@version` starts
+A first run downloads into the NuGet cache. A later `ndx tool@version` starts
 the cached binary — no SDK, no restore.
 
 ## Install
@@ -21,13 +21,13 @@ the cached binary — no SDK, no restore.
 macOS / Linux:
 
 ```bash
-curl -fsSL https://github.com/devlooped/ndnx/releases/latest/download/install.sh | sh
+curl -fsSL https://github.com/devlooped/ndx/releases/latest/download/install.sh | sh
 ```
 
 Windows (PowerShell):
 
 ```powershell
-irm https://github.com/devlooped/ndnx/releases/latest/download/install.ps1 | iex
+irm https://github.com/devlooped/ndx/releases/latest/download/install.ps1 | iex
 ```
 
 ## Update
@@ -35,35 +35,35 @@ irm https://github.com/devlooped/ndnx/releases/latest/download/install.ps1 | iex
 Self-update the installed binary (optional version, including downgrades):
 
 ```bash
-ndnx --update
-ndnx --update 0.1.0
+ndx --update
+ndx --update 0.1.0
 ```
 
 ## Usage
-*ndnx*
+*ndx*
 
 Same shape as `dnx` / `dotnet dnx` / `dotnet tool exec`:
 
 ```bash
-dnx  stop -- --help
-ndnx stop -- --help
+dnx stop -- --help
+ndx stop -- --help
 
-dnx  stop@2.1.0 -- --help
-ndnx stop@2.1.0 -- --help
+dnx stop@2.1.0 -- --help
+ndx stop@2.1.0 -- --help
 
-dnx  dotnetsay@1.0.0 -- Hello
-ndnx dotnetsay@1.0.0 -- Hello
+dnx dotnetsay@1.0.0 -- Hello
+ndx dotnetsay@1.0.0 -- Hello
 ```
 
 Pin a feed the same way (here the CI feed used for the timings below):
 
 ```bash
-dnx  --source https://kzu.blob.core.windows.net/nuget/index.json stop@2.1.0 -- --help
-ndnx --source https://kzu.blob.core.windows.net/nuget/index.json stop@2.1.0 -- --help
+dnx --source https://kzu.blob.core.windows.net/nuget/index.json stop@2.1.0 -- --help
+ndx --source https://kzu.blob.core.windows.net/nuget/index.json stop@2.1.0 -- --help
 ```
 
 `stop` is a Native AOT RID tool. `dotnetsay` is a classic framework-dependent
-tool. Both are just NuGet packages; ndnx picks the host RID and starts
+tool. Both are just NuGet packages; ndx picks the host RID and starts
 `Runner=executable` binaries directly, or `dotnet exec` for `Runner=dotnet`.
 
 An exact version already in the cache (`NUGET_PACKAGES`, then
@@ -71,10 +71,10 @@ An exact version already in the cache (`NUGET_PACKAGES`, then
 downloaded again. A first `tool@version` run builds the nupkg URL from the
 service index (cached for the process) and lists versions only if that GET
 is 404. Packages written by `dnx` or `dotnet restore` are reused; packages
-written by ndnx are visible to them.
+written by ndx are visible to them.
 
 A floating version — unspecified, `@*`, `@*-*`, or a NuGet range — stays
-current. ndnx starts the latest match, watches the feed, downloads a newer
+current. ndx starts the latest match, watches the feed, downloads a newer
 matching version *before* stopping the child, then sends SIGINT / Ctrl+C
 (and `WM_CLOSE` if the tool is a GUI) and restarts. Short tools still exit
 as soon as the child exits. Pin an exact version (`tool@2.1.0`) to disable
@@ -83,11 +83,11 @@ that loop.
 The poll interval defaults to 5 seconds and can be set in `.netconfig`:
 
 ```
-[ndnx]
+[ndx]
     interval = 5
 ```
 
-ndnx walks from the working directory up, then `~/.netconfig`. `--verbosity
+ndx walks from the working directory up, then `~/.netconfig`. `--verbosity
 quiet` hides the `Updating …` line.
 
 Shared flags: `--source`, `--add-source`, `--configfile`, `--version`,
@@ -104,18 +104,18 @@ SDK 10.0.303.
 | Tool | Runner | Cold linux-x64 | Cold win-x64 | Cached linux-x64 | Cached win-x64 |
 | --- | --- | ---: | ---: | ---: | ---: |
 | `stop@2.1.0` (native AOT) | `dnx` | 2.2 s | 2.1 s | 580 ms | 520 ms |
-| | `ndnx` | **1.2 s** | **1.5 s** | **10 ms** | **34 ms** |
+| | `ndx` | **1.2 s** | **1.5 s** | **10 ms** | **34 ms** |
 | `dotnetsay@1.0.0` (framework-dependent) | `dnx` | 1.6 s | 1.8 s | 570 ms | 545 ms |
-| | `ndnx` | **849 ms** | **1.1 s** | **12 ms** | **50 ms** |
+| | `ndx` | **849 ms** | **1.1 s** | **12 ms** | **50 ms** |
 | `winget` (native AOT TUI, Windows) | `dnx` | — | 2.7 s | — | 820 ms |
-| | `ndnx` | — | **1.2 s** | — | **275 ms** |
+| | `ndx` | — | **1.2 s** | — | **275 ms** |
 
 Isolated `NUGET_PACKAGES`. `stop` / `dotnetsay` from
 `https://kzu.blob.core.windows.net/nuget/index.json`; `winget` from nuget.org.
 Cold is the median of 3 empty-cache runs. Cached is the median of 10 runs after
-one seed. `stop` invoked as `-- --help`; `dotnetsay` as `-- ndnx`. `winget` is
+one seed. `stop` invoked as `-- --help`; `dotnetsay` as `-- ndx`. `winget` is
 a TUI so it does not exit on its own: cold is `winget` (latest), cached is
-`winget@0.13.2`; each run waits until `winget-tui` is up, then `ndnx stop@2.1.0`
+`winget@0.13.2`; each run waits until `winget-tui` is up, then `ndx stop@2.1.0`
 signals that PID and the clock stops when the runner exits. `dnx` is the SDK
 script (`dotnet dnx`). `winget` timings are win-x64 SDK 11.0.100-preview.
 

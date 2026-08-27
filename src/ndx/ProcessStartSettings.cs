@@ -1,9 +1,9 @@
 using System.Diagnostics;
 
-namespace ndnx;
+namespace ndx;
 
 /// <summary>
-/// Process start settings for the downloaded tool. ndnx always starts the child
+/// Process start settings for the downloaded tool. ndx always starts the child
 /// without a shell and with inherited standard in/out/error.
 /// </summary>
 public sealed record ProcessStartSettings

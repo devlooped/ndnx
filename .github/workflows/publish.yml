@@ -50,7 +50,7 @@ jobs:
         run: |
           $out = "artifacts/${{ matrix.rid }}"
           New-Item -ItemType Directory -Force -Path $out | Out-Null
-          dotnet publish src/ndnx/ndnx.csproj -c $env:Configuration -r ${{ matrix.rid }} --self-contained -p:PublishAot=true -o $out -bl:"publish-${{ matrix.rid }}.binlog"
+          dotnet publish src/ndx/ndx.csproj -c $env:Configuration -r ${{ matrix.rid }} --self-contained -p:PublishAot=true -o $out -bl:"publish-${{ matrix.rid }}.binlog"
 
       - name: 📦 pack
         shell: pwsh
@@ -63,11 +63,11 @@ jobs:
         with:
           name: native-aot-${{ matrix.rid }}
           path: |
-            artifacts/${{ matrix.rid }}/ndnx
-            artifacts/${{ matrix.rid }}/ndnx.exe
-            artifacts/ndnx-*.zip
-            artifacts/ndnx-*.tar.gz
-            artifacts/ndnx-*.sha256
+            artifacts/${{ matrix.rid }}/ndx
+            artifacts/${{ matrix.rid }}/ndx.exe
+            artifacts/ndx-*.zip
+            artifacts/ndx-*.tar.gz
+            artifacts/ndx-*.sha256
           retention-days: 30
           if-no-files-found: error
 

@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Xml.Linq;
 
-namespace ndnx;
+namespace ndx;
 
 /// <summary>
 /// Downloads a tool package into a local cache (no PATH / global install) and
