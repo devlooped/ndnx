@@ -85,6 +85,34 @@ public class NativePackerTests
     }
 
     [Fact]
+    public void Osx_rid_ignores_dsym_dwarf_also_named_ndx()
+    {
+        using var dir = new TempDir();
+        var payload = "osx-native-bytes"u8.ToArray();
+        var nupkg = RidNupkg.Write(dir.Nupkg, "osx-arm64", payload);
+
+        using (var zip = ZipFile.OpenRead(nupkg))
+        {
+            var namedNdx = zip.Entries
+                .Where(entry => Path.GetFileName(entry.FullName) == "ndx")
+                .Select(entry => entry.FullName.Replace('\\', '/'))
+                .ToArray();
+            Assert.Contains("tools/any/osx-arm64/ndx", namedNdx);
+            Assert.Contains("tools/any/osx-arm64/ndx.dSYM/Contents/Resources/DWARF/ndx", namedNdx);
+        }
+
+        var result = NativePacker.Pack(nupkg, "osx-arm64", dir.Output, "1.0.0");
+        using var file = File.OpenRead(result.ArchivePath);
+        using var gzip = new GZipStream(file, CompressionMode.Decompress);
+        using var tar = new TarReader(gzip);
+        var entry = tar.GetNextEntry(copyData: true);
+        Assert.NotNull(entry);
+        using var memory = new MemoryStream();
+        entry.DataStream!.CopyTo(memory);
+        Assert.Equal(payload, memory.ToArray());
+    }
+
+    [Fact]
     public void Missing_binary_is_a_packer_error()
     {
         using var dir = new TempDir();

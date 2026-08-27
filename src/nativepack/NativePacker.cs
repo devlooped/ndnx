@@ -33,7 +33,7 @@ public static class NativePacker
         ArgumentException.ThrowIfNullOrWhiteSpace(version);
 
         var binaryName = BinaryFileName(rid);
-        var payload = ReadNativeBinary(nupkgPath, binaryName);
+        var payload = ReadNativeBinary(nupkgPath, rid, binaryName);
 
         Directory.CreateDirectory(outputDirectory);
 
@@ -55,7 +55,7 @@ public static class NativePacker
         return new NativePackResult(archivePath, sha256Path, sha256, binaryName);
     }
 
-    static byte[] ReadNativeBinary(string nupkgPath, string binaryName)
+    static byte[] ReadNativeBinary(string nupkgPath, string rid, string binaryName)
     {
         if (!File.Exists(nupkgPath))
         {
@@ -66,9 +66,7 @@ public static class NativePacker
 
         using var zip = ZipFile.OpenRead(nupkgPath);
         var matches = zip.Entries
-            .Where(entry =>
-                entry.Length > 0 &&
-                string.Equals(Path.GetFileName(entry.FullName), binaryName, StringComparison.OrdinalIgnoreCase))
+            .Where(entry => IsNativeBinaryEntry(entry, binaryName))
             .ToArray();
 
         if (matches.Length == 0)
@@ -78,17 +76,43 @@ public static class NativePacker
                 binaryName);
         }
 
-        if (matches.Length > 1)
+        var preferred = "tools/any/" + rid + "/" + binaryName;
+        var chosen = matches.FirstOrDefault(entry =>
+                PathsEqual(entry.FullName, preferred))
+            ?? (matches.Length == 1 ? matches[0] : null);
+
+        if (chosen is null)
         {
             throw new InvalidOperationException(
                 $"Multiple '{binaryName}' entries in '{nupkgPath}'.");
         }
 
-        using var stream = matches[0].Open();
+        using var stream = chosen.Open();
         using var memory = new MemoryStream();
         stream.CopyTo(memory);
         return memory.ToArray();
     }
+
+    static bool IsNativeBinaryEntry(ZipArchiveEntry entry, string binaryName)
+    {
+        if (entry.Length <= 0)
+            return false;
+
+        var path = entry.FullName.Replace('\\', '/');
+        if (path.Contains(".dSYM/", StringComparison.OrdinalIgnoreCase) ||
+            path.EndsWith(".dSYM", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return string.Equals(Path.GetFileName(path), binaryName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    static bool PathsEqual(string left, string right)
+        => string.Equals(
+            left.Replace('\\', '/').TrimStart('/'),
+            right.Replace('\\', '/').TrimStart('/'),
+            StringComparison.OrdinalIgnoreCase);
 
     static void PackZip(byte[] payload, string binaryName, string archivePath)
     {

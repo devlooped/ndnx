@@ -22,6 +22,13 @@ static class RidNupkg
         WriteEntry(zip, $"tools/any/{rid}/DotnetToolSettings.xml",
             """<?xml version="1.0" encoding="utf-8"?><DotNetCliTool />"""u8.ToArray());
         WriteEntry(zip, $"tools/any/{rid}/{Path.GetFileNameWithoutExtension(binary)}.pdb", "pdb"u8.ToArray());
+        if (rid.StartsWith("osx", StringComparison.OrdinalIgnoreCase))
+        {
+            WriteEntry(
+                zip,
+                $"tools/any/{rid}/{binary}.dSYM/Contents/Resources/DWARF/{binary}",
+                "dwarf-debug-bytes"u8.ToArray());
+        }
         WriteEntry(zip, "readme.md", "# ndx"u8.ToArray());
         return path;
     }
