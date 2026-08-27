@@ -128,6 +128,7 @@ public class NdxPackTests
         start.ArgumentList.Add("-o");
         start.ArgumentList.Add(dir.Nupkg);
         start.ArgumentList.Add("--nologo");
+        start.ArgumentList.Add("-p:GeneratePackageOnBuild=false");
         start.ArgumentList.Add("--artifacts-path");
         start.ArgumentList.Add(dir.Artifacts);
         if (rid is not null)

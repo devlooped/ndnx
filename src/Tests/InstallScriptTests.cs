@@ -289,6 +289,7 @@ public class InstallScriptTests
         Assert.Contains("SLEET_CONNECTION", build);
         Assert.Contains("-p:RuntimeIdentifiers=any", build);
         Assert.Contains("-r any", build);
+        Assert.DoesNotContain("GeneratePackageOnBuild", build);
         Assert.DoesNotContain("dotnet nuget push", ci);
         Assert.DoesNotContain("sleet push", ci);
         Assert.Contains("install.sh", yml);
