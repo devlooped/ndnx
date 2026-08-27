@@ -324,6 +324,13 @@ public sealed class HelloToolFeed : IDisposable
         foreach (var arg in args)
             start.ArgumentList.Add(arg);
 
+        // CI may export these as env vars (MSBuild properties). They make
+        // PackAsTool publish look for outputs that were never built (MSB3030).
+        start.Environment.Remove("PackOnBuild");
+        start.Environment.Remove("GeneratePackageOnBuild");
+        start.ArgumentList.Add("-p:GeneratePackageOnBuild=false");
+        start.ArgumentList.Add("-p:PackOnBuild=false");
+
         var (exit, stdout, stderr) = ProcessCapture.Run(start, timeoutMs: 180_000);
         if (exit != 0)
         {

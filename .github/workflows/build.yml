@@ -21,8 +21,6 @@ on:
 
 env:
   DOTNET_NOLOGO: true
-  PackOnBuild: true
-  GeneratePackageOnBuild: true
   VersionPrefix: 42.42.${{ github.run_number }}
   VersionLabel: ${{ github.ref }}
   GH_TOKEN: ${{ secrets.GH_TOKEN }}
@@ -69,6 +67,11 @@ jobs:
         uses: devlooped/actions-dotnet-env@v1
 
       - name: 🙏 build
+        env:
+          # Must not be job-level: testhost inherits these as MSBuild properties
+          # and PackAsTool fixture packs fail with MSB3030 (outputs never built).
+          PackOnBuild: true
+          GeneratePackageOnBuild: true
         run: |
           dotnet build -m:1 -bl:build.binlog -p:RuntimeIdentifiers=any
           dotnet build src/ndx/ndx.csproj -bl:runtime.binlog -p:RuntimeIdentifiers=any -r any
