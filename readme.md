@@ -9,7 +9,7 @@
 
 <!-- #content -->
 `ndx` (*n*ative *d*otnet e*x*ecute) is [`dnx`](https://learn.microsoft.com/dotnet/core/tools/dotnet-tool-exec) for
-native tools packaged and distributed as NuGet packages. Same one-shot CLI, same
+native tools packaged and distributed as NuGet packages. Same
 `PACKAGE[@VERSION]` identity, same restore flags, same global packages folder.
 
 If you can `dnx stop`, you can `ndx stop`. `dotnet dnx` and `dotnet tool exec`
@@ -95,12 +95,41 @@ service index (cached for the process) and lists versions only if that GET
 is 404. Packages written by `dnx` or `dotnet restore` are reused; packages
 written by ndx are visible to them.
 
-A floating version — unspecified, `@*`, `@*-*`, or a NuGet range — stays
-current. ndx starts the latest match, watches the feed, downloads a newer
-matching version *before* stopping the child, then sends SIGINT / Ctrl+C
-(and `WM_CLOSE` if the tool is a GUI) and restarts. Short tools still exit
-as soon as the child exits. Pin an exact version (`tool@2.1.0`) to disable
-that loop.
+Shared flags: `--source`, `--add-source`, `--configfile`, `--version`,
+`--prerelease`, `--yes`/`-y`, `--allow-roll-forward`, `--verbosity`/`-v`,
+`--disable-parallel`, `--ignore-failed-sources`, `--no-http-cache`,
+`--interactive`.
+
+## Evergreen
+
+Unlike `dnx`, omitting the version is `@*` — not a one-shot latest.
+`ndx my-agent` and `ndx my-agent@*` are the same: start the latest match,
+and while that process is still running, watch the feed, download a newer
+matching version *before* stopping the child, then send SIGINT / Ctrl+C
+(and `WM_CLOSE` if the tool is a GUI) and restart.
+
+`@*-*` includes prereleases. `@1.*` / `@1.1.*` pin a major or minor the
+GitHub Actions way (float the rest). A NuGet range like `[1.0,2.0)` works
+too. One-shot tools still exit as soon as the child exits; the watch loop
+only continues while the child is alive. Pin an exact version
+(`tool@2.1.0`) to disable it.
+
+```bash
+ndx my-agent
+ndx my-agent@*
+ndx my-agent@1.*
+ndx my-agent@1.1.*
+ndx my-agent@[1.0,2.0)
+```
+
+That's the point for anything that is supposed to keep running: a daemon,
+an agent, an MCP server, a watcher, a local gateway. You start it once.
+When a newer matching package lands on the feed, ndx stages the bits, asks
+the current process to exit cleanly, and starts the new one. No
+`dotnet tool update -g`, no unit file to bounce, no cron that reinstalls.
+The running process is always the latest version the range allows, so an
+agent picks up new tools and bugfixes, a daemon picks up a patched build,
+without anyone being there to restart it.
 
 The poll interval defaults to 5 seconds and can be set in `.netconfig`:
 
@@ -111,11 +140,6 @@ The poll interval defaults to 5 seconds and can be set in `.netconfig`:
 
 ndx walks from the working directory up, then `~/.netconfig`. `--verbosity
 quiet` hides the `Updating …` line.
-
-Shared flags: `--source`, `--add-source`, `--configfile`, `--version`,
-`--prerelease`, `--yes`/`-y`, `--allow-roll-forward`, `--verbosity`/`-v`,
-`--disable-parallel`, `--ignore-failed-sources`, `--no-http-cache`,
-`--interactive`.
 
 ## Startup time
 

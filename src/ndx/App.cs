@@ -46,7 +46,7 @@ public static class App
                ndx --update [VERSION|ci]
                ndx --version
 
-        A floating version (unspecified, @*, @*-*, or a range) stays current:
+        Unlike dnx, a bare package name is @*. A floating version stays current:
         ndx watches the feed and restarts the tool when a newer match appears.
 
         Options:
@@ -105,6 +105,7 @@ public static class App
             var store = new ToolPackageStore(feed, host.StoreDirectory, log, muxer, host.RuntimeIdentifier);
             var command = await store.GetAsync(invocation, sources, cancellationToken).ConfigureAwait(false);
             var range = VersionRange.FromInvocation(invocation);
+            // Bare, @*, @1.*, and ranges stay current. Exact pins are one-shot (like dnx).
             if (!range.IsExact)
             {
                 return await Evergreen.RunAsync(
