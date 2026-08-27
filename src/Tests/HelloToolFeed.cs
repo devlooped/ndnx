@@ -110,7 +110,7 @@ public sealed class HelloToolFeed : IDisposable
 
     void PackFrameworkDependent(string projectDir)
     {
-        RunDotnet(["pack", "-c", "Release", "--nologo"], projectDir);
+        RunDotnet(["pack", "-c", "Release", "--nologo", "-p:GeneratePackageOnBuild=false"], projectDir);
     }
 
     void PublishAndPackExecutable(string projectDir)
@@ -323,6 +323,9 @@ public sealed class HelloToolFeed : IDisposable
         };
         foreach (var arg in args)
             start.ArgumentList.Add(arg);
+
+        start.Environment["GeneratePackageOnBuild"] = "false";
+        start.Environment["PackOnBuild"] = "false";
 
         var (exit, stdout, stderr) = ProcessCapture.Run(start, timeoutMs: 180_000);
         if (exit != 0)

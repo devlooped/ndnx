@@ -21,8 +21,6 @@ on:
 
 env:
   DOTNET_NOLOGO: true
-  PackOnBuild: true
-  GeneratePackageOnBuild: true
   VersionPrefix: 42.42.${{ github.run_number }}
   VersionLabel: ${{ github.ref }}
   GH_TOKEN: ${{ secrets.GH_TOKEN }}
@@ -69,13 +67,16 @@ jobs:
         uses: devlooped/actions-dotnet-env@v1
 
       - name: 🙏 build
-        run: |
-          dotnet build -m:1 -bl:build.binlog -p:RuntimeIdentifiers=any
-          dotnet build src/ndx/ndx.csproj -bl:runtime.binlog -p:RuntimeIdentifiers=any -r any
+        run: dotnet build -m:1 -bl:build.binlog
 
       - name: 🧪 test
         shell: pwsh
         run: dnx --yes retest -- --no-build
+
+      - name: 📦 pack
+        run: |
+          dotnet pack src/ndx/ndx.csproj -c "$Configuration" -p:RuntimeIdentifiers=any -bl:pointer-pack.binlog
+          dotnet pack src/ndx/ndx.csproj -c "$Configuration" -r any -bl:any-pack.binlog
 
       - name: 🐛 logs
         uses: actions/upload-artifact@v4
