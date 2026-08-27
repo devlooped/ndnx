@@ -1,8 +1,16 @@
 # Changelog
 
-## [ci](https://github.com/devlooped/ndx/tree/ci) (2026-08-25)
+## [ci](https://github.com/devlooped/ndx/tree/ci) (2026-08-27)
 
-[Full Changelog](https://github.com/devlooped/ndx/compare/v0.6.6...ci)
+[Full Changelog](https://github.com/devlooped/ndx/compare/v1.0.0...ci)
+
+## [v1.0.0](https://github.com/devlooped/ndx/tree/v1.0.0) (2026-08-27)
+
+[Full Changelog](https://github.com/devlooped/ndx/compare/v0.6.6...v1.0.0)
+
+:sparkles: Implemented enhancements:
+
+- Rename ndnx to ndx [\#16](https://github.com/devlooped/ndx/pull/16) (@kzu)
 
 ## [v0.6.6](https://github.com/devlooped/ndx/tree/v0.6.6) (2026-08-25)
 
