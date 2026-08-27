@@ -1,31 +1,21 @@
 # Changelog
 
+## [v1.0.0](https://github.com/devlooped/ndx/tree/v1.0.0) (2026-08-27)
+
+[Full Changelog](https://github.com/devlooped/ndx/compare/ci...v1.0.0)
+
+:bug: Fixed bugs:
+
+- Ignore macOS dSYM DWARF when packing native archives [\#19](https://github.com/devlooped/ndx/pull/19) (@kzu)
+
 ## [ci](https://github.com/devlooped/ndx/tree/ci) (2026-08-27)
 
-[Full Changelog](https://github.com/devlooped/ndx/compare/v1.0.2...ci)
-
-## [v1.0.2](https://github.com/devlooped/ndx/tree/v1.0.2) (2026-08-27)
-
-[Full Changelog](https://github.com/devlooped/ndx/compare/v1.0.1...v1.0.2)
+[Full Changelog](https://github.com/devlooped/ndx/compare/v0.6.6...ci)
 
 :sparkles: Implemented enhancements:
 
 - Pack ndx as a multi-RID NuGet tool [\#18](https://github.com/devlooped/ndx/pull/18) (@kzu)
-
-## [v1.0.1](https://github.com/devlooped/ndx/tree/v1.0.1) (2026-08-27)
-
-[Full Changelog](https://github.com/devlooped/ndx/compare/v1.0.0...v1.0.1)
-
-:sparkles: Implemented enhancements:
-
 - Add uninstall scripts [\#17](https://github.com/devlooped/ndx/pull/17) (@kzu)
-
-## [v1.0.0](https://github.com/devlooped/ndx/tree/v1.0.0) (2026-08-27)
-
-[Full Changelog](https://github.com/devlooped/ndx/compare/v0.6.6...v1.0.0)
-
-:sparkles: Implemented enhancements:
-
 - Rename ndnx to ndx [\#16](https://github.com/devlooped/ndx/pull/16) (@kzu)
 
 ## [v0.6.6](https://github.com/devlooped/ndx/tree/v0.6.6) (2026-08-25)
